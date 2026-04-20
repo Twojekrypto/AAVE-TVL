@@ -1,5 +1,7 @@
 const API_URL = "https://api.llama.fi/protocol/aave";
 const SNAPSHOT_URL = "./aave_data.json";
+const COMPARE_API_URL = "https://twojekrypto.github.io/vedolo-dashboard/defillama_data.json";
+const COMPARE_SNAPSHOT_URL = "./dolomite_data.json";
 const NON_CHAIN_KEYS = new Set([
   "borrowed",
   "staking",
@@ -47,6 +49,11 @@ const state = {
   latestSupply: 0,
   latestTvl: 0,
   latestBorrowed: 0,
+  compareRawPoints: [],
+  compareRangePoints: [],
+  compareVisiblePoints: [],
+  compareLatestSupply: 0,
+  compareChainCount: 0,
   chainsExpanded: false,
 };
 
@@ -161,7 +168,14 @@ function setCoverage(chains) {
     return;
   }
 
-  coverage.textContent = `${chains.length} active Aave chains in the current snapshot`;
+  const parts = [];
+  if (chains?.length) {
+    parts.push(`Aave: ${chains.length} chains`);
+  }
+  if (state.compareChainCount) {
+    parts.push(`Dolomite: ${state.compareChainCount} chains`);
+  }
+  coverage.textContent = parts.join(" · ") || "Loading markets...";
 }
 
 async function fetchJson(url, timeoutMs) {
@@ -171,7 +185,7 @@ async function fetchJson(url, timeoutMs) {
   try {
     const response = await fetch(url, {
       signal: controller.signal,
-      cache: url === SNAPSHOT_URL ? "default" : "no-store",
+      cache: url.startsWith("./") ? "default" : "no-store",
     });
 
     if (!response.ok) {
@@ -236,7 +250,7 @@ function buildChainRows(currentChainTvls) {
   return { rows, totalTvl };
 }
 
-function hydrateData(data, sourceLabel) {
+function buildProtocolSnapshot(data) {
   const currentChainTvls = data.currentChainTvls || {};
   const { rows, totalTvl } = buildChainRows(currentChainTvls);
   const totalBorrowed = currentChainTvls.borrowed || 0;
@@ -252,15 +266,46 @@ function hydrateData(data, sourceLabel) {
     value: point.totalLiquidityUSD + (borrowedMap.get(point.date) || 0),
   }));
 
-  state.chainRows = rows;
-  state.latestTvl = totalTvl;
-  state.latestBorrowed = totalBorrowed;
-  state.latestSupply = liveSupply;
-  state.rawPoints = normalizeSeries(rawSeries, liveSupply);
+  return {
+    rows,
+    totalTvl,
+    totalBorrowed,
+    liveSupply,
+    rawPoints: normalizeSeries(rawSeries, liveSupply),
+  };
+}
+
+function updateLegend() {
+  setMetric("legend-aave-value", formatCurrency(state.latestSupply));
+  setMetric("legend-dolomite-value", formatCurrency(state.compareLatestSupply));
+}
+
+function filterSeriesByDate(series, startDate, endDate) {
+  if (!series.length || !startDate || !endDate) {
+    return [];
+  }
+
+  const startTime = startDate.getTime();
+  const endTime = endDate.getTime();
+
+  return series.filter((point) => {
+    const pointTime = point.date.getTime();
+    return pointTime >= startTime && pointTime <= endTime;
+  });
+}
+
+function hydrateData(data, sourceLabel) {
+  const snapshot = buildProtocolSnapshot(data);
+
+  state.chainRows = snapshot.rows;
+  state.latestTvl = snapshot.totalTvl;
+  state.latestBorrowed = snapshot.totalBorrowed;
+  state.latestSupply = snapshot.liveSupply;
+  state.rawPoints = snapshot.rawPoints;
   state.rangePoints = [...state.rawPoints];
   state.visiblePoints = [...state.rawPoints];
 
-  setCoverage(rows);
+  setCoverage(state.chainRows);
   renderChainBars();
   renderBrush();
   setRange(state.currentRange || "all");
@@ -280,6 +325,22 @@ function hydrateData(data, sourceLabel) {
   if (updatedAt && state.rawPoints.length) {
     const latestPointDate = formatDateLong(state.rawPoints[state.rawPoints.length - 1].date);
     updatedAt.textContent = `${sourceLabel === "live" ? "Live" : "Snapshot"} point: ${latestPointDate}`;
+  }
+
+  updateLegend();
+}
+
+function hydrateCompareData(data) {
+  const snapshot = buildProtocolSnapshot(data);
+  state.compareRawPoints = snapshot.rawPoints;
+  state.compareLatestSupply = snapshot.liveSupply;
+  state.compareChainCount = snapshot.rows.length;
+
+  if (state.rangePoints.length) {
+    setRange(state.currentRange || "all");
+  } else {
+    setCoverage(state.chainRows);
+    updateLegend();
   }
 }
 
@@ -462,9 +523,21 @@ function applyBrush() {
     state.visiblePoints = [...state.rangePoints];
   }
 
+  const visibleStartDate = state.visiblePoints[0]?.date;
+  const visibleEndDate = state.visiblePoints[state.visiblePoints.length - 1]?.date;
+  state.compareVisiblePoints = filterSeriesByDate(
+    state.compareRangePoints,
+    visibleStartDate,
+    visibleEndDate
+  );
+  if (state.compareVisiblePoints.length < 2) {
+    state.compareVisiblePoints = [...state.compareRangePoints];
+  }
+
   updateBrushLabel();
   updateResetButton();
   updateHero(currentVisibleChange());
+  updateLegend();
   renderChart();
 }
 
@@ -551,11 +624,14 @@ function renderChart() {
   const width = 1000;
   const height = 360;
   const padLeft = 76;
-  const padRight = 20;
+  const padRight = 76;
   const padTop = 20;
   const padBottom = 28;
   const innerWidth = width - padLeft - padRight;
   const innerHeight = height - padTop - padBottom;
+  const startTime = state.visiblePoints[0].date.getTime();
+  const endTime = state.visiblePoints[state.visiblePoints.length - 1].date.getTime();
+  const totalTime = Math.max(1, endTime - startTime);
 
   const values = state.visiblePoints.map((point) => point.value);
   const minValue = Math.min(...values);
@@ -566,17 +642,39 @@ function renderChart() {
   const adjustedMax = maxValue + verticalPad;
   const adjustedSpread = adjustedMax - adjustedMin || 1;
 
-  const points = state.visiblePoints.map((point, index) => {
-    const x = padLeft + (innerWidth * index) / Math.max(1, state.visiblePoints.length - 1);
+  const points = state.visiblePoints.map((point) => {
+    const x = padLeft + ((point.date.getTime() - startTime) / totalTime) * innerWidth;
     const y = height - padBottom - ((point.value - adjustedMin) / adjustedSpread) * innerHeight;
     return { x, y };
   });
 
   const linePath = smoothPath(points);
   const areaPath = `${linePath} L ${points[points.length - 1].x.toFixed(2)} ${(height - padBottom).toFixed(2)} L ${points[0].x.toFixed(2)} ${(height - padBottom).toFixed(2)} Z`;
+  const hasCompareSeries = state.compareVisiblePoints.length >= 2;
+  const compareValues = hasCompareSeries ? state.compareVisiblePoints.map((point) => point.value) : [];
+  const compareMinValue = hasCompareSeries ? Math.min(...compareValues) : 0;
+  const compareMaxValue = hasCompareSeries ? Math.max(...compareValues) : 1;
+  const compareSpread = compareMaxValue - compareMinValue;
+  const comparePad = compareSpread > 0 ? compareSpread * 0.1 : Math.max(compareMaxValue * 0.06, 1);
+  const compareAdjustedMin = Math.max(0, compareMinValue - comparePad);
+  const compareAdjustedMax = compareMaxValue + comparePad;
+  const compareAdjustedSpread = compareAdjustedMax - compareAdjustedMin || 1;
+  const comparePoints = hasCompareSeries
+    ? state.compareVisiblePoints.map((point) => {
+      const x = padLeft + ((point.date.getTime() - startTime) / totalTime) * innerWidth;
+      const y = height - padBottom - ((point.value - compareAdjustedMin) / compareAdjustedSpread) * innerHeight;
+      return { x, y };
+    })
+    : [];
+  const compareLinePath = hasCompareSeries ? smoothPath(comparePoints) : "";
 
   const yTicks = Array.from({ length: 5 }, (_, index) => {
     const value = adjustedMax - (adjustedSpread * index) / 4;
+    const y = padTop + (innerHeight * index) / 4;
+    return { value, y };
+  });
+  const compareTicks = Array.from({ length: 5 }, (_, index) => {
+    const value = compareAdjustedMax - (compareAdjustedSpread * index) / 4;
     const y = padTop + (innerHeight * index) / 4;
     return { value, y };
   });
@@ -588,6 +686,11 @@ function renderChart() {
   const labels = yTicks
     .map((tick) => `<text x="${padLeft - 12}" y="${(tick.y + 4).toFixed(1)}" fill="rgba(156,172,204,0.7)" font-size="10" font-family="'JetBrains Mono', monospace" text-anchor="end">${formatCompactNumber(tick.value)}</text>`)
     .join("");
+  const compareLabels = hasCompareSeries
+    ? compareTicks
+      .map((tick) => `<text x="${width - padRight + 12}" y="${(tick.y + 4).toFixed(1)}" fill="rgba(245,191,97,0.72)" font-size="10" font-family="'JetBrains Mono', monospace" text-anchor="start">${formatCompactNumber(tick.value)}</text>`)
+      .join("")
+    : "";
 
   svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
   svg.innerHTML = `
@@ -605,15 +708,22 @@ function renderChart() {
         <stop offset="55%" stop-color="#63e1ff" />
         <stop offset="100%" stop-color="#ff7cb7" />
       </linearGradient>
+      <linearGradient id="compare-line-gradient" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0%" stop-color="#f5bf61" />
+        <stop offset="100%" stop-color="#ff7cb7" />
+      </linearGradient>
     </defs>
     ${grid}
     ${labels}
+    ${compareLabels}
     <g clip-path="url(#chart-clip)">
       <path d="${areaPath}" fill="url(#area-gradient)" />
       <path d="${linePath}" fill="none" stroke="url(#line-gradient)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" />
+      ${hasCompareSeries ? `<path d="${compareLinePath}" fill="none" stroke="url(#compare-line-gradient)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="6 5" />` : ""}
     </g>
     <line id="hover-line" x1="0" y1="${padTop}" x2="0" y2="${height - padBottom}" stroke="rgba(255,255,255,0.22)" stroke-width="1" opacity="0" />
     <circle id="hover-dot" cx="0" cy="0" r="4.5" fill="#7ca5ff" stroke="#08101f" stroke-width="2" opacity="0" />
+    <circle id="hover-dot-compare" cx="0" cy="0" r="4.2" fill="#f5bf61" stroke="#08101f" stroke-width="2" opacity="0" />
   `;
 
   const spanDays = (state.visiblePoints[state.visiblePoints.length - 1].date - state.visiblePoints[0].date) / (1000 * 60 * 60 * 24);
@@ -630,6 +740,7 @@ function renderChart() {
   const tooltip = document.getElementById("chart-tooltip");
   const hoverLine = document.getElementById("hover-line");
   const hoverDot = document.getElementById("hover-dot");
+  const hoverCompareDot = document.getElementById("hover-dot-compare");
 
   const hideTooltip = () => {
     if (tooltip) {
@@ -641,9 +752,13 @@ function renderChart() {
     if (hoverDot) {
       hoverDot.setAttribute("opacity", "0");
     }
+    if (hoverCompareDot) {
+      hoverCompareDot.setAttribute("opacity", "0");
+    }
   };
 
   const rangeStartValue = state.visiblePoints[0].value;
+  const compareStartValue = state.compareVisiblePoints[0]?.value || 0;
   const wrapRectResolver = () => wrap.getBoundingClientRect();
 
   wrap.onpointermove = (event) => {
@@ -661,14 +776,54 @@ function renderChart() {
     const pctChange = rangeStartValue
       ? ((entry.value - rangeStartValue) / rangeStartValue) * 100
       : 0;
+    const compareEntry = state.compareVisiblePoints.find(
+      (pointCandidate) => pointCandidate.date.getTime() === entry.date.getTime()
+    ) || state.compareVisiblePoints.reduce((closest, pointCandidate) => {
+      if (!closest) {
+        return pointCandidate;
+      }
+
+      const currentDistance = Math.abs(pointCandidate.date.getTime() - entry.date.getTime());
+      const closestDistance = Math.abs(closest.date.getTime() - entry.date.getTime());
+      return currentDistance < closestDistance ? pointCandidate : closest;
+    }, null);
+    const comparePctChange = compareEntry && compareStartValue
+      ? ((compareEntry.value - compareStartValue) / compareStartValue) * 100
+      : 0;
+    const comparePoint = compareEntry
+      ? {
+        x: padLeft + ((compareEntry.date.getTime() - startTime) / totalTime) * innerWidth,
+        y: height - padBottom - ((compareEntry.value - compareAdjustedMin) / compareAdjustedSpread) * innerHeight,
+      }
+      : null;
 
     tooltip.classList.remove("hidden");
     tooltip.innerHTML = `
-      <strong>${formatCurrency(entry.value)}</strong>
-      <time class="tooltip-date">${formatDateLong(entry.date)}</time>
-      <span class="tooltip-change ${pctChange >= 0 ? "positive" : "negative"}">
-        ${pctChange >= 0 ? "+" : ""}${pctChange.toFixed(2)}% from visible start
-      </span>
+      <strong class="tooltip-title">${formatDateLong(entry.date)}</strong>
+      <div class="tooltip-series">
+        <div class="tooltip-series-block">
+          <div class="tooltip-series-row">
+            <span class="tooltip-swatch tooltip-swatch-aave"></span>
+            <span class="tooltip-series-name">Aave</span>
+            <strong>${formatCurrency(entry.value)}</strong>
+          </div>
+          <span class="tooltip-subchange ${pctChange >= 0 ? "positive" : "negative"}">
+            ${pctChange >= 0 ? "+" : ""}${pctChange.toFixed(2)}% from visible start
+          </span>
+        </div>
+        ${compareEntry ? `
+          <div class="tooltip-series-block">
+            <div class="tooltip-series-row">
+              <span class="tooltip-swatch tooltip-swatch-dolomite"></span>
+              <span class="tooltip-series-name">Dolomite</span>
+              <strong>${formatCurrency(compareEntry.value)}</strong>
+            </div>
+            <span class="tooltip-subchange ${comparePctChange >= 0 ? "positive" : "negative"}">
+              ${comparePctChange >= 0 ? "+" : ""}${comparePctChange.toFixed(2)}% from visible start
+            </span>
+          </div>
+        ` : ""}
+      </div>
     `;
 
     hoverLine.setAttribute("x1", point.x.toFixed(2));
@@ -677,6 +832,13 @@ function renderChart() {
     hoverDot.setAttribute("cx", point.x.toFixed(2));
     hoverDot.setAttribute("cy", point.y.toFixed(2));
     hoverDot.setAttribute("opacity", "1");
+    if (hoverCompareDot && comparePoint) {
+      hoverCompareDot.setAttribute("cx", comparePoint.x.toFixed(2));
+      hoverCompareDot.setAttribute("cy", comparePoint.y.toFixed(2));
+      hoverCompareDot.setAttribute("opacity", "1");
+    } else if (hoverCompareDot) {
+      hoverCompareDot.setAttribute("opacity", "0");
+    }
 
     const xPx = (point.x / width) * rect.width;
     const yPx = (point.y / height) * rect.height;
@@ -708,9 +870,18 @@ function setRange(range) {
     state.rangePoints = state.rawPoints.slice(-days);
   }
 
+  const rangeStartDate = state.rangePoints[0]?.date;
+  const rangeEndDate = state.rangePoints[state.rangePoints.length - 1]?.date;
+  state.compareRangePoints = filterSeriesByDate(
+    state.compareRawPoints,
+    rangeStartDate,
+    rangeEndDate
+  );
+
   state.brushStart = 0;
   state.brushEnd = 1;
   state.visiblePoints = [...state.rangePoints];
+  state.compareVisiblePoints = [...state.compareRangePoints];
 
   document.querySelectorAll("#range-pills button").forEach((button) => {
     button.classList.toggle("active", button.dataset.range === String(range));
@@ -824,21 +995,42 @@ function bindBrush() {
 
 async function fetchData() {
   try {
-    try {
-      const snapshotData = await fetchJson(SNAPSHOT_URL, 10000);
-      hydrateData(snapshotData, "snapshot");
-    } catch (snapshotError) {
-      console.warn("Snapshot load failed:", snapshotError);
+    const snapshotResults = await Promise.allSettled([
+      fetchJson(SNAPSHOT_URL, 10000),
+      fetchJson(COMPARE_SNAPSHOT_URL, 10000),
+    ]);
+
+    if (snapshotResults[0].status === "fulfilled") {
+      hydrateData(snapshotResults[0].value, "snapshot");
+    } else {
+      console.warn("Aave snapshot load failed:", snapshotResults[0].reason);
     }
 
-    try {
-      const liveData = await fetchJson(API_URL, 15000);
-      hydrateData(liveData, "live");
-    } catch (liveError) {
-      console.warn("Live refresh failed:", liveError);
-      if (!state.rawPoints.length) {
-        throw liveError;
-      }
+    if (snapshotResults[1].status === "fulfilled") {
+      hydrateCompareData(snapshotResults[1].value);
+    } else {
+      console.warn("Dolomite snapshot load failed:", snapshotResults[1].reason);
+    }
+
+    const liveResults = await Promise.allSettled([
+      fetchJson(API_URL, 15000),
+      fetchJson(COMPARE_API_URL, 15000),
+    ]);
+
+    if (liveResults[0].status === "fulfilled") {
+      hydrateData(liveResults[0].value, "live");
+    } else {
+      console.warn("Live refresh failed:", liveResults[0].reason);
+    }
+
+    if (liveResults[1].status === "fulfilled") {
+      hydrateCompareData(liveResults[1].value);
+    } else {
+      console.warn("Dolomite refresh failed:", liveResults[1].reason);
+    }
+
+    if (!state.rawPoints.length) {
+      throw new Error("Unable to load Aave supply data");
     }
   } catch (error) {
     showError(error instanceof Error ? error.message : "Unknown error");
