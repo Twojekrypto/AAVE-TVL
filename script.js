@@ -29,6 +29,14 @@ const AAVE_MARKETS_QUERY = `
     }
   }
 `;
+const CHART_AAVE_START = "#58A6FF";
+const CHART_AAVE_END = "#2FE6FF";
+const CHART_AAVE_GLOW = "rgba(88, 166, 255, 0.42)";
+const CHART_AAVE_SOFT = "rgba(88, 166, 255, 0.18)";
+const CHART_DOLO_START = "#FFD166";
+const CHART_DOLO_END = "#FF8F3F";
+const CHART_DOLO_GLOW = "rgba(255, 177, 77, 0.44)";
+const CHART_DOLO_SOFT = "rgba(255, 177, 77, 0.26)";
 const NON_CHAIN_KEYS = new Set([
   "borrowed",
   "staking",
@@ -859,16 +867,16 @@ function renderBrush() {
   svg.innerHTML = `
     <defs>
       <linearGradient id="brush-area-gradient" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stop-color="rgba(124, 165, 255, 0.28)" />
-        <stop offset="100%" stop-color="rgba(124, 165, 255, 0.02)" />
+        <stop offset="0%" stop-color="rgba(88, 166, 255, 0.28)" />
+        <stop offset="100%" stop-color="rgba(88, 166, 255, 0.02)" />
       </linearGradient>
       <linearGradient id="brush-line-gradient" x1="0" y1="0" x2="1" y2="0">
-        <stop offset="0%" stop-color="rgba(124, 165, 255, 0.66)" />
-        <stop offset="100%" stop-color="rgba(255, 124, 183, 0.9)" />
+        <stop offset="0%" stop-color="${CHART_AAVE_START}" />
+        <stop offset="100%" stop-color="${CHART_AAVE_END}" />
       </linearGradient>
     </defs>
     <path d="${area}" fill="url(#brush-area-gradient)" />
-    <path d="${line}" fill="none" stroke="rgba(124, 165, 255, 0.16)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
+    <path d="${line}" fill="none" stroke="${CHART_AAVE_SOFT}" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
     <path d="${line}" fill="none" stroke="url(#brush-line-gradient)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
   `;
 
@@ -963,7 +971,7 @@ function renderChart() {
     .join("");
   const compareLabels = !isRelativeMode && hasCompareSeries
     ? compareTicks
-      .map((tick) => `<text x="${width - padRight + 12}" y="${(tick.y + 4).toFixed(1)}" fill="rgba(255,210,122,0.96)" font-size="10" font-family="'JetBrains Mono', monospace" text-anchor="start">${formatChartAxisTick(tick.value, "absolute")}</text>`)
+      .map((tick) => `<text x="${width - padRight + 12}" y="${(tick.y + 4).toFixed(1)}" fill="rgba(255,221,156,0.98)" font-size="10" font-family="'JetBrains Mono', monospace" text-anchor="start">${formatChartAxisTick(tick.value, "absolute")}</text>`)
       .join("")
     : "";
 
@@ -974,19 +982,17 @@ function renderChart() {
         <rect x="${padLeft}" y="${padTop}" width="${innerWidth}" height="${innerHeight}" rx="0" />
       </clipPath>
       <linearGradient id="area-gradient" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stop-color="rgba(124, 165, 255, 0.24)" />
-        <stop offset="55%" stop-color="rgba(124, 165, 255, 0.06)" />
-        <stop offset="100%" stop-color="rgba(124, 165, 255, 0.02)" />
+        <stop offset="0%" stop-color="rgba(88, 166, 255, 0.22)" />
+        <stop offset="55%" stop-color="rgba(88, 166, 255, 0.055)" />
+        <stop offset="100%" stop-color="rgba(88, 166, 255, 0.02)" />
       </linearGradient>
       <linearGradient id="line-gradient" x1="0" y1="0" x2="1" y2="0">
-        <stop offset="0%" stop-color="rgba(124, 165, 255, 0.78)" />
-        <stop offset="55%" stop-color="rgba(99, 225, 255, 0.76)" />
-        <stop offset="100%" stop-color="rgba(255, 124, 183, 0.74)" />
+        <stop offset="0%" stop-color="${CHART_AAVE_START}" />
+        <stop offset="100%" stop-color="${CHART_AAVE_END}" />
       </linearGradient>
       <linearGradient id="compare-line-gradient" x1="0" y1="0" x2="1" y2="0">
-        <stop offset="0%" stop-color="#ffd86f" />
-        <stop offset="52%" stop-color="#ffb85c" />
-        <stop offset="100%" stop-color="#ff7cb7" />
+        <stop offset="0%" stop-color="${CHART_DOLO_START}" />
+        <stop offset="100%" stop-color="${CHART_DOLO_END}" />
       </linearGradient>
       <filter id="compare-line-glow" x="-20%" y="-35%" width="140%" height="170%">
         <feGaussianBlur stdDeviation="4.5" result="blur" />
@@ -994,9 +1000,9 @@ function renderChart() {
           in="blur"
           type="matrix"
           values="1 0 0 0 0
-                  0 0.86 0 0 0
-                  0 0 0.55 0 0
-                  0 0 0 0.9 0"
+                  0 0.72 0 0 0
+                  0 0 0.24 0 0
+                  0 0 0 0.92 0"
           result="glow"
         />
         <feMerge>
@@ -1006,22 +1012,22 @@ function renderChart() {
       </filter>
     </defs>
     ${grid}
-    ${zeroLineY !== null ? `<line x1="${padLeft}" y1="${zeroLineY.toFixed(1)}" x2="${width - padRight}" y2="${zeroLineY.toFixed(1)}" stroke="rgba(255,216,111,0.22)" stroke-width="1.2" stroke-dasharray="5 5" />` : ""}
+    ${zeroLineY !== null ? `<line x1="${padLeft}" y1="${zeroLineY.toFixed(1)}" x2="${width - padRight}" y2="${zeroLineY.toFixed(1)}" stroke="rgba(255, 177, 77, 0.24)" stroke-width="1.2" stroke-dasharray="5 5" />` : ""}
     ${labels}
     ${compareLabels}
     <g clip-path="url(#chart-clip)">
       ${!isRelativeMode ? `<path d="${areaPath}" fill="url(#area-gradient)" />` : ""}
-      <path d="${linePath}" fill="none" stroke="${isRelativeMode ? "rgba(124, 165, 255, 0.12)" : "rgba(124, 165, 255, 0.18)"}" stroke-width="${isRelativeMode ? "3.2" : "4"}" stroke-linecap="round" stroke-linejoin="round" />
+      <path d="${linePath}" fill="none" stroke="${isRelativeMode ? "rgba(88, 166, 255, 0.12)" : CHART_AAVE_SOFT}" stroke-width="${isRelativeMode ? "3.2" : "4"}" stroke-linecap="round" stroke-linejoin="round" />
       <path d="${linePath}" fill="none" stroke="url(#line-gradient)" stroke-width="${isRelativeMode ? "2.2" : "1.75"}" stroke-linecap="round" stroke-linejoin="round" />
       ${hasCompareSeries ? `
-        <path d="${compareLinePath}" fill="none" stroke="rgba(255, 216, 111, 0.28)" stroke-width="${isRelativeMode ? "11" : "9"}" stroke-linecap="round" stroke-linejoin="round" filter="url(#compare-line-glow)" />
-        <path d="${compareLinePath}" fill="none" stroke="rgba(255, 255, 255, 0.26)" stroke-width="${isRelativeMode ? "6.1" : "5.2"}" stroke-linecap="round" stroke-linejoin="round" />
+        <path d="${compareLinePath}" fill="none" stroke="${CHART_DOLO_SOFT}" stroke-width="${isRelativeMode ? "11" : "9"}" stroke-linecap="round" stroke-linejoin="round" filter="url(#compare-line-glow)" />
+        <path d="${compareLinePath}" fill="none" stroke="rgba(255, 245, 222, 0.24)" stroke-width="${isRelativeMode ? "6.1" : "5.2"}" stroke-linecap="round" stroke-linejoin="round" />
         <path d="${compareLinePath}" fill="none" stroke="url(#compare-line-gradient)" stroke-width="${isRelativeMode ? "3.9" : "3.35"}" stroke-linecap="round" stroke-linejoin="round" />
       ` : ""}
     </g>
     <line id="hover-line" x1="0" y1="${padTop}" x2="0" y2="${height - padBottom}" stroke="rgba(255,255,255,0.22)" stroke-width="1" opacity="0" />
-    <circle id="hover-dot" cx="0" cy="0" r="4.5" fill="#7ca5ff" stroke="#08101f" stroke-width="2" opacity="0" />
-    <circle id="hover-dot-compare" cx="0" cy="0" r="5.6" fill="#ffd86f" stroke="#08101f" stroke-width="2.4" opacity="0" />
+    <circle id="hover-dot" cx="0" cy="0" r="4.5" fill="${CHART_AAVE_START}" stroke="#08101f" stroke-width="2" opacity="0" />
+    <circle id="hover-dot-compare" cx="0" cy="0" r="5.6" fill="${CHART_DOLO_START}" stroke="#08101f" stroke-width="2.4" opacity="0" />
   `;
 
   const spanDays = (state.visiblePoints[state.visiblePoints.length - 1].date - state.visiblePoints[0].date) / (1000 * 60 * 60 * 24);
