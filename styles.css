@@ -538,6 +538,24 @@ h1 {
   font-size: 12px;
 }
 
+.chart-context {
+  display: grid;
+  justify-items: end;
+  gap: 6px;
+}
+
+.chart-scale-pill {
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(255, 216, 111, 0.08);
+  border: 1px solid rgba(255, 216, 111, 0.16);
+  color: rgba(255, 225, 168, 0.92);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  font-family: "JetBrains Mono", monospace;
+}
+
 .chart-toolbar {
   display: flex;
   flex-wrap: wrap;
@@ -546,6 +564,7 @@ h1 {
   gap: 10px;
 }
 
+.mode-pills,
 .range-pills {
   display: inline-flex;
   flex-wrap: wrap;
@@ -556,6 +575,7 @@ h1 {
   border: 1px solid rgba(161, 182, 255, 0.08);
 }
 
+.mode-pills button,
 .range-pills button,
 .reset-button {
   border: 0;
@@ -563,6 +583,22 @@ h1 {
   font: inherit;
   cursor: pointer;
   transition: background var(--transition), color var(--transition), transform var(--transition);
+}
+
+.mode-pills button {
+  min-width: 82px;
+  padding: 10px 14px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+.mode-pills button:hover,
+.mode-pills button.active {
+  background: linear-gradient(135deg, rgba(255, 216, 111, 0.18), rgba(255, 124, 183, 0.12));
+  color: var(--text-primary);
 }
 
 .range-pills button {
@@ -921,6 +957,10 @@ h1 {
     align-items: flex-start;
   }
 
+  .chart-context {
+    justify-items: start;
+  }
+
   .chart-axis {
     padding: 10px 16px 0;
   }
@@ -940,6 +980,11 @@ h1 {
     justify-content: space-between;
   }
 
+  .mode-pills {
+    width: 100%;
+  }
+
+  .mode-pills button,
   .range-pills button {
     flex: 1 1 calc(20% - 6px);
     min-width: 0;

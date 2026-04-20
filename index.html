@@ -113,6 +113,10 @@
             </div>
 
             <div class="chart-toolbar">
+              <div class="mode-pills" id="mode-pills">
+                <button type="button" data-mode="relative" class="active">Relative</button>
+                <button type="button" data-mode="absolute">Absolute</button>
+              </div>
               <div class="range-pills" id="range-pills">
                 <button type="button" data-range="30">30D</button>
                 <button type="button" data-range="90">90D</button>
@@ -141,7 +145,10 @@
                 </div>
               </div>
             </div>
-            <div class="chart-axis-hint">Aave = left axis, Dolomite = right axis</div>
+            <div class="chart-context">
+              <div id="chart-axis-hint" class="chart-axis-hint">Relative mode · both lines show change from the visible-range start</div>
+              <div id="chart-scale-pill" class="chart-scale-pill">Current scale: loading…</div>
+            </div>
           </div>
 
           <div id="chart-wrap" class="chart-wrap">

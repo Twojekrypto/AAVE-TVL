@@ -74,6 +74,7 @@ const state = {
   visiblePoints: [],
   chainRows: [],
   currentRange: "all",
+  currentChartMode: "relative",
   brushStart: 0,
   brushEnd: 1,
   latestSupply: 0,
@@ -427,6 +428,95 @@ function updateLegend() {
   setMetric("legend-dolomite-value", formatCurrency(state.compareLatestSupply));
 }
 
+function updateChartContext() {
+  const hint = document.getElementById("chart-axis-hint");
+  const scalePill = document.getElementById("chart-scale-pill");
+
+  if (hint) {
+    hint.textContent = state.currentChartMode === "relative"
+      ? "Relative mode · both lines show % change from the visible-range start"
+      : "Absolute mode · Aave = left axis, Dolomite = right axis";
+  }
+
+  if (scalePill) {
+    if (!Number.isFinite(state.latestSupply) || !Number.isFinite(state.compareLatestSupply) || state.compareLatestSupply <= 0) {
+      scalePill.textContent = "Current scale: —";
+      return;
+    }
+
+    const ratio = state.latestSupply / state.compareLatestSupply;
+    scalePill.textContent = `Current scale: Aave ${ratio.toFixed(ratio >= 10 ? 1 : 2)}x Dolomite`;
+  }
+}
+
+function formatChartAxisTick(value, mode) {
+  if (!Number.isFinite(value)) {
+    return "—";
+  }
+
+  if (mode === "relative") {
+    const sign = value > 0 ? "+" : "";
+    return `${sign}${value.toFixed(Math.abs(value) >= 10 ? 0 : 1)}%`;
+  }
+
+  return formatCompactNumber(value);
+}
+
+function buildRelativePlotSeries(series) {
+  if (!series.length) {
+    return [];
+  }
+
+  const base = series[0].value;
+  if (!Number.isFinite(base) || base === 0) {
+    return series.map((point) => ({ ...point, plotValue: 0 }));
+  }
+
+  return series.map((point) => ({
+    ...point,
+    plotValue: ((point.value - base) / base) * 100,
+  }));
+}
+
+function buildValueBounds(values, padRatio = 0.1) {
+  if (!values.length) {
+    return { min: 0, max: 1, spread: 1 };
+  }
+
+  const minValue = Math.min(...values);
+  const maxValue = Math.max(...values);
+  const spread = maxValue - minValue;
+  const verticalPad = spread > 0 ? spread * padRatio : Math.max(Math.abs(maxValue) * 0.1, 1.5);
+  const adjustedMin = minValue - verticalPad;
+  const adjustedMax = maxValue + verticalPad;
+
+  return {
+    min: adjustedMin,
+    max: adjustedMax,
+    spread: adjustedMax - adjustedMin || 1,
+  };
+}
+
+function findClosestEntry(series, targetDate) {
+  if (!series.length || !targetDate) {
+    return { entry: null, index: -1 };
+  }
+
+  const targetTime = targetDate.getTime();
+  let closestIndex = 0;
+  let smallestDistance = Math.abs(series[0].date.getTime() - targetTime);
+
+  for (let index = 1; index < series.length; index += 1) {
+    const distance = Math.abs(series[index].date.getTime() - targetTime);
+    if (distance < smallestDistance) {
+      smallestDistance = distance;
+      closestIndex = index;
+    }
+  }
+
+  return { entry: series[closestIndex], index: closestIndex };
+}
+
 function filterSeriesByDate(series, startDate, endDate) {
   if (!series.length || !startDate || !endDate) {
     return [];
@@ -710,6 +800,7 @@ function applyBrush() {
   updateResetButton();
   updateHero(currentVisibleChange());
   updateLegend();
+  updateChartContext();
   renderChart();
 }
 
@@ -804,63 +895,75 @@ function renderChart() {
   const startTime = state.visiblePoints[0].date.getTime();
   const endTime = state.visiblePoints[state.visiblePoints.length - 1].date.getTime();
   const totalTime = Math.max(1, endTime - startTime);
+  const hasCompareSeries = state.compareVisiblePoints.length >= 2;
+  const isRelativeMode = state.currentChartMode === "relative";
+  const plottedAave = isRelativeMode
+    ? buildRelativePlotSeries(state.visiblePoints)
+    : state.visiblePoints.map((point) => ({ ...point, plotValue: point.value }));
+  const plottedCompare = hasCompareSeries
+    ? (isRelativeMode
+      ? buildRelativePlotSeries(state.compareVisiblePoints)
+      : state.compareVisiblePoints.map((point) => ({ ...point, plotValue: point.value })))
+    : [];
 
-  const values = state.visiblePoints.map((point) => point.value);
-  const minValue = Math.min(...values);
-  const maxValue = Math.max(...values);
-  const spread = maxValue - minValue;
-  const verticalPad = spread > 0 ? spread * 0.1 : Math.max(maxValue * 0.06, 1);
-  const adjustedMin = Math.max(0, minValue - verticalPad);
-  const adjustedMax = maxValue + verticalPad;
-  const adjustedSpread = adjustedMax - adjustedMin || 1;
+  const aaveBounds = buildValueBounds(plottedAave.map((point) => point.plotValue), isRelativeMode ? 0.18 : 0.1);
+  const compareBounds = isRelativeMode
+    ? aaveBounds
+    : hasCompareSeries
+      ? buildValueBounds(plottedCompare.map((point) => point.plotValue), 0.1)
+      : aaveBounds;
+  const sharedBounds = isRelativeMode
+    ? buildValueBounds(
+      [...plottedAave.map((point) => point.plotValue), ...plottedCompare.map((point) => point.plotValue)],
+      0.18
+    )
+    : aaveBounds;
+  const primaryBounds = isRelativeMode ? sharedBounds : aaveBounds;
 
-  const points = state.visiblePoints.map((point) => {
+  const points = plottedAave.map((point) => {
     const x = padLeft + ((point.date.getTime() - startTime) / totalTime) * innerWidth;
-    const y = height - padBottom - ((point.value - adjustedMin) / adjustedSpread) * innerHeight;
+    const y = height - padBottom - ((point.plotValue - primaryBounds.min) / primaryBounds.spread) * innerHeight;
+    return { x, y };
+  });
+  const comparePoints = plottedCompare.map((point) => {
+    const x = padLeft + ((point.date.getTime() - startTime) / totalTime) * innerWidth;
+    const bounds = isRelativeMode ? primaryBounds : compareBounds;
+    const y = height - padBottom - ((point.plotValue - bounds.min) / bounds.spread) * innerHeight;
     return { x, y };
   });
 
   const linePath = smoothPath(points);
-  const areaPath = `${linePath} L ${points[points.length - 1].x.toFixed(2)} ${(height - padBottom).toFixed(2)} L ${points[0].x.toFixed(2)} ${(height - padBottom).toFixed(2)} Z`;
-  const hasCompareSeries = state.compareVisiblePoints.length >= 2;
-  const compareValues = hasCompareSeries ? state.compareVisiblePoints.map((point) => point.value) : [];
-  const compareMinValue = hasCompareSeries ? Math.min(...compareValues) : 0;
-  const compareMaxValue = hasCompareSeries ? Math.max(...compareValues) : 1;
-  const compareSpread = compareMaxValue - compareMinValue;
-  const comparePad = compareSpread > 0 ? compareSpread * 0.1 : Math.max(compareMaxValue * 0.06, 1);
-  const compareAdjustedMin = Math.max(0, compareMinValue - comparePad);
-  const compareAdjustedMax = compareMaxValue + comparePad;
-  const compareAdjustedSpread = compareAdjustedMax - compareAdjustedMin || 1;
-  const comparePoints = hasCompareSeries
-    ? state.compareVisiblePoints.map((point) => {
-      const x = padLeft + ((point.date.getTime() - startTime) / totalTime) * innerWidth;
-      const y = height - padBottom - ((point.value - compareAdjustedMin) / compareAdjustedSpread) * innerHeight;
-      return { x, y };
-    })
-    : [];
+  const areaPath = points.length
+    ? `${linePath} L ${points[points.length - 1].x.toFixed(2)} ${(height - padBottom).toFixed(2)} L ${points[0].x.toFixed(2)} ${(height - padBottom).toFixed(2)} Z`
+    : "";
   const compareLinePath = hasCompareSeries ? smoothPath(comparePoints) : "";
 
   const yTicks = Array.from({ length: 5 }, (_, index) => {
-    const value = adjustedMax - (adjustedSpread * index) / 4;
+    const value = primaryBounds.max - (primaryBounds.spread * index) / 4;
     const y = padTop + (innerHeight * index) / 4;
     return { value, y };
   });
-  const compareTicks = Array.from({ length: 5 }, (_, index) => {
-    const value = compareAdjustedMax - (compareAdjustedSpread * index) / 4;
-    const y = padTop + (innerHeight * index) / 4;
-    return { value, y };
-  });
+  const compareTicks = !isRelativeMode && hasCompareSeries
+    ? Array.from({ length: 5 }, (_, index) => {
+      const value = compareBounds.max - (compareBounds.spread * index) / 4;
+      const y = padTop + (innerHeight * index) / 4;
+      return { value, y };
+    })
+    : [];
 
+  const zeroLineY = isRelativeMode && primaryBounds.min < 0 && primaryBounds.max > 0
+    ? height - padBottom - ((0 - primaryBounds.min) / primaryBounds.spread) * innerHeight
+    : null;
   const grid = yTicks
     .map((tick) => `<line x1="${padLeft}" y1="${tick.y.toFixed(1)}" x2="${width - padRight}" y2="${tick.y.toFixed(1)}" stroke="rgba(255,255,255,0.045)" stroke-width="1" />`)
     .join("");
 
   const labels = yTicks
-    .map((tick) => `<text x="${padLeft - 12}" y="${(tick.y + 4).toFixed(1)}" fill="rgba(156,172,204,0.7)" font-size="10" font-family="'JetBrains Mono', monospace" text-anchor="end">${formatCompactNumber(tick.value)}</text>`)
+    .map((tick) => `<text x="${padLeft - 12}" y="${(tick.y + 4).toFixed(1)}" fill="rgba(156,172,204,0.7)" font-size="10" font-family="'JetBrains Mono', monospace" text-anchor="end">${formatChartAxisTick(tick.value, state.currentChartMode)}</text>`)
     .join("");
-  const compareLabels = hasCompareSeries
+  const compareLabels = !isRelativeMode && hasCompareSeries
     ? compareTicks
-      .map((tick) => `<text x="${width - padRight + 12}" y="${(tick.y + 4).toFixed(1)}" fill="rgba(255,210,122,0.96)" font-size="10" font-family="'JetBrains Mono', monospace" text-anchor="start">${formatCompactNumber(tick.value)}</text>`)
+      .map((tick) => `<text x="${width - padRight + 12}" y="${(tick.y + 4).toFixed(1)}" fill="rgba(255,210,122,0.96)" font-size="10" font-family="'JetBrains Mono', monospace" text-anchor="start">${formatChartAxisTick(tick.value, "absolute")}</text>`)
       .join("")
     : "";
 
@@ -903,16 +1006,17 @@ function renderChart() {
       </filter>
     </defs>
     ${grid}
+    ${zeroLineY !== null ? `<line x1="${padLeft}" y1="${zeroLineY.toFixed(1)}" x2="${width - padRight}" y2="${zeroLineY.toFixed(1)}" stroke="rgba(255,216,111,0.22)" stroke-width="1.2" stroke-dasharray="5 5" />` : ""}
     ${labels}
     ${compareLabels}
     <g clip-path="url(#chart-clip)">
-      <path d="${areaPath}" fill="url(#area-gradient)" />
-      <path d="${linePath}" fill="none" stroke="rgba(124, 165, 255, 0.18)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
-      <path d="${linePath}" fill="none" stroke="url(#line-gradient)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" />
+      ${!isRelativeMode ? `<path d="${areaPath}" fill="url(#area-gradient)" />` : ""}
+      <path d="${linePath}" fill="none" stroke="${isRelativeMode ? "rgba(124, 165, 255, 0.12)" : "rgba(124, 165, 255, 0.18)"}" stroke-width="${isRelativeMode ? "3.2" : "4"}" stroke-linecap="round" stroke-linejoin="round" />
+      <path d="${linePath}" fill="none" stroke="url(#line-gradient)" stroke-width="${isRelativeMode ? "2.2" : "1.75"}" stroke-linecap="round" stroke-linejoin="round" />
       ${hasCompareSeries ? `
-        <path d="${compareLinePath}" fill="none" stroke="rgba(255, 216, 111, 0.28)" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" filter="url(#compare-line-glow)" />
-        <path d="${compareLinePath}" fill="none" stroke="rgba(255, 255, 255, 0.26)" stroke-width="5.2" stroke-linecap="round" stroke-linejoin="round" />
-        <path d="${compareLinePath}" fill="none" stroke="url(#compare-line-gradient)" stroke-width="3.35" stroke-linecap="round" stroke-linejoin="round" />
+        <path d="${compareLinePath}" fill="none" stroke="rgba(255, 216, 111, 0.28)" stroke-width="${isRelativeMode ? "11" : "9"}" stroke-linecap="round" stroke-linejoin="round" filter="url(#compare-line-glow)" />
+        <path d="${compareLinePath}" fill="none" stroke="rgba(255, 255, 255, 0.26)" stroke-width="${isRelativeMode ? "6.1" : "5.2"}" stroke-linecap="round" stroke-linejoin="round" />
+        <path d="${compareLinePath}" fill="none" stroke="url(#compare-line-gradient)" stroke-width="${isRelativeMode ? "3.9" : "3.35"}" stroke-linecap="round" stroke-linejoin="round" />
       ` : ""}
     </g>
     <line id="hover-line" x1="0" y1="${padTop}" x2="0" y2="${height - padBottom}" stroke="rgba(255,255,255,0.22)" stroke-width="1" opacity="0" />
@@ -970,24 +1074,14 @@ function renderChart() {
     const pctChange = rangeStartValue
       ? ((entry.value - rangeStartValue) / rangeStartValue) * 100
       : 0;
-    const compareEntry = state.compareVisiblePoints.find(
-      (pointCandidate) => pointCandidate.date.getTime() === entry.date.getTime()
-    ) || state.compareVisiblePoints.reduce((closest, pointCandidate) => {
-      if (!closest) {
-        return pointCandidate;
-      }
-
-      const currentDistance = Math.abs(pointCandidate.date.getTime() - entry.date.getTime());
-      const closestDistance = Math.abs(closest.date.getTime() - entry.date.getTime());
-      return currentDistance < closestDistance ? pointCandidate : closest;
-    }, null);
+    const { entry: compareEntry, index: compareIndex } = findClosestEntry(state.compareVisiblePoints, entry.date);
     const comparePctChange = compareEntry && compareStartValue
       ? ((compareEntry.value - compareStartValue) / compareStartValue) * 100
       : 0;
-    const comparePoint = compareEntry
+    const comparePoint = compareEntry && compareIndex >= 0
       ? {
-        x: padLeft + ((compareEntry.date.getTime() - startTime) / totalTime) * innerWidth,
-        y: height - padBottom - ((compareEntry.value - compareAdjustedMin) / compareAdjustedSpread) * innerHeight,
+        x: comparePoints[compareIndex].x,
+        y: comparePoints[compareIndex].y,
       }
       : null;
 
@@ -1101,6 +1195,21 @@ function bindRangePills() {
       applyBrush();
     });
   }
+}
+
+function bindModePills() {
+  document.querySelectorAll("#mode-pills button").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.currentChartMode = button.dataset.mode;
+
+      document.querySelectorAll("#mode-pills button").forEach((control) => {
+        control.classList.toggle("active", control.dataset.mode === state.currentChartMode);
+      });
+
+      updateChartContext();
+      renderChart();
+    });
+  });
 }
 
 function bindBrush() {
@@ -1285,6 +1394,7 @@ function bindResizeRefresh() {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
+  bindModePills();
   bindRangePills();
   bindBrush();
   bindResizeRefresh();
