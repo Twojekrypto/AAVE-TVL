@@ -1,9 +1,34 @@
-const API_URL = "https://api.llama.fi/protocol/aave";
-const SNAPSHOT_URL = "./aave_data.json";
+const AAVE_API_URL = "https://api.v3.aave.com/graphql";
+const AAVE_HISTORY_API_URL = "https://api.llama.fi/protocol/aave";
+const AAVE_HISTORY_SNAPSHOT_URL = "./aave_data.json";
+const AAVE_CURRENT_SNAPSHOT_URL = "./aave_current.json";
 const COMPARE_API_URL = "https://twojekrypto.github.io/vedolo-dashboard/defillama_data.json";
 const COMPARE_SNAPSHOT_URL = "./dolomite_data.json";
 const COMPARE_CURRENT_API_URL = "https://twojekrypto.github.io/vedolo-dashboard/dolomite_tvl.json";
 const COMPARE_CURRENT_SNAPSHOT_URL = "./dolomite_current.json";
+const AAVE_CHAINS_QUERY = `
+  query AaveChains {
+    chains {
+      chainId
+      isTestnet
+    }
+  }
+`;
+const AAVE_MARKETS_QUERY = `
+  query AaveMarkets($chainIds: [ChainId!]!) {
+    markets(request: { chainIds: $chainIds }) {
+      name
+      address
+      chain {
+        chainId
+        name
+        icon
+      }
+      totalMarketSize
+      totalAvailableLiquidity
+    }
+  }
+`;
 const NON_CHAIN_KEYS = new Set([
   "borrowed",
   "staking",
@@ -26,8 +51,10 @@ const CHAIN_META = {
   Fantom: { color: "#58a3ff", icon: "https://icons.llamao.fi/icons/chains/rsz_fantom.jpg" },
   Metis: { color: "#72c6ff", icon: "https://icons.llamao.fi/icons/chains/rsz_metis.jpg" },
   xDai: { color: "#74e8c1", icon: "https://icons.llamao.fi/icons/chains/rsz_gnosis.jpg" },
+  Gnosis: { color: "#74e8c1", icon: "" },
   Linea: { color: "#f4bf61", icon: "https://icons.llamao.fi/icons/chains/rsz_linea.jpg" },
   "zkSync Era": { color: "#a8b8ff", icon: "https://icons.llamao.fi/icons/chains/rsz_zksync%20era.jpg" },
+  zkSync: { color: "#a8b8ff", icon: "" },
   Sonic: { color: "#73f0ff", icon: "https://icons.llamao.fi/icons/chains/rsz_sonic.jpg" },
   Soneium: { color: "#d4ddff", icon: "https://icons.llamao.fi/icons/chains/rsz_soneium.jpg" },
   Binance: { color: "#f3ce62", icon: "https://icons.llamao.fi/icons/chains/rsz_binance.jpg" },
@@ -36,6 +63,7 @@ const CHAIN_META = {
   Mantle: { color: "#8be2d0", icon: "https://icons.llamao.fi/icons/chains/rsz_mantle.jpg" },
   Plasma: { color: "#ff8cc6", icon: "" },
   Celo: { color: "#b8ff6f", icon: "https://icons.llamao.fi/icons/chains/rsz_celo.jpg" },
+  Ink: { color: "#ff97c0", icon: "" },
   "X Layer": { color: "#f5a162", icon: "" },
   MegaETH: { color: "#70d3ff", icon: "" },
 };
@@ -200,6 +228,36 @@ async function fetchJson(url, timeoutMs) {
   }
 }
 
+async function fetchGraphQL(url, query, variables, timeoutMs) {
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({ query, variables }),
+      signal: controller.signal,
+      cache: "no-store",
+    });
+
+    if (!response.ok) {
+      throw new Error(`${url} returned ${response.status}`);
+    }
+
+    const payload = await response.json();
+    if (payload.errors?.length) {
+      throw new Error(payload.errors.map((entry) => entry.message).join("; "));
+    }
+
+    return payload.data;
+  } finally {
+    window.clearTimeout(timeout);
+  }
+}
+
 function showError(message) {
   const chainBars = document.getElementById("chain-bars");
   const chartWrap = document.getElementById("chart-wrap");
@@ -228,7 +286,12 @@ function showError(message) {
   }
 }
 
-function buildChainRows(currentChainTvls) {
+function toFiniteNumber(value) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function buildLegacyChainRows(currentChainTvls) {
   const rows = [];
   let totalTvl = 0;
 
@@ -250,6 +313,54 @@ function buildChainRows(currentChainTvls) {
 
   rows.sort((left, right) => right.supply - left.supply);
   return { rows, totalTvl };
+}
+
+function buildOfficialProtocolSnapshot(data) {
+  const grouped = new Map();
+  let totalTvl = 0;
+  let totalBorrowed = 0;
+  let liveSupply = 0;
+
+  (data?.markets || []).forEach((market) => {
+    const chainName = market?.chain?.name;
+    const supply = toFiniteNumber(market?.totalMarketSize);
+    const available = toFiniteNumber(market?.totalAvailableLiquidity);
+
+    if (!chainName || supply <= 0) {
+      return;
+    }
+
+    const borrowed = Math.max(0, supply - available);
+    const existing = grouped.get(chainName) || {
+      chain: chainName,
+      tvl: 0,
+      borrowed: 0,
+      supply: 0,
+    };
+
+    existing.tvl += available;
+    existing.borrowed += borrowed;
+    existing.supply += supply;
+    grouped.set(chainName, existing);
+
+    if (market.chain?.icon) {
+      CHAIN_META[chainName] = {
+        color: CHAIN_META[chainName]?.color || "#7ca5ff",
+        icon: market.chain.icon,
+      };
+    }
+
+    totalTvl += available;
+    totalBorrowed += borrowed;
+    liveSupply += supply;
+  });
+
+  return {
+    rows: [...grouped.values()].sort((left, right) => right.supply - left.supply),
+    totalTvl,
+    totalBorrowed,
+    liveSupply,
+  };
 }
 
 function deriveGrossSupplyFromCurrentMap(currentChainTvls) {
@@ -285,9 +396,9 @@ function buildHistorySupplySeries(data) {
   }));
 }
 
-function buildProtocolSnapshot(data) {
+function buildLegacyProtocolSnapshot(data) {
   const currentChainTvls = data.currentChainTvls || {};
-  const { rows, totalTvl } = buildChainRows(currentChainTvls);
+  const { rows, totalTvl } = buildLegacyChainRows(currentChainTvls);
   const totalBorrowed = currentChainTvls.borrowed || 0;
   const liveSupply = totalTvl + totalBorrowed;
 
@@ -297,6 +408,17 @@ function buildProtocolSnapshot(data) {
     totalBorrowed,
     liveSupply,
     rawPoints: normalizeSeries(buildHistorySupplySeries(data), liveSupply),
+  };
+}
+
+function buildAaveSnapshot(historyData, currentData = null) {
+  const currentSnapshot = currentData?.markets
+    ? buildOfficialProtocolSnapshot(currentData)
+    : buildLegacyProtocolSnapshot(historyData);
+
+  return {
+    ...currentSnapshot,
+    rawPoints: normalizeSeries(buildHistorySupplySeries(historyData), currentSnapshot.liveSupply),
   };
 }
 
@@ -319,8 +441,16 @@ function filterSeriesByDate(series, startDate, endDate) {
   });
 }
 
-function hydrateData(data, sourceLabel) {
-  const snapshot = buildProtocolSnapshot(data);
+function setAaveStatus(copy) {
+  const element = document.getElementById("status-copy");
+  if (element) {
+    element.textContent = copy;
+  }
+}
+
+function hydrateData(historyData, currentData = null, sourceLabel = "snapshot") {
+  const snapshot = buildAaveSnapshot(historyData, currentData);
+  const hasOfficialCurrent = Boolean(currentData?.markets?.length);
 
   state.chainRows = snapshot.rows;
   state.latestTvl = snapshot.totalTvl;
@@ -335,11 +465,15 @@ function hydrateData(data, sourceLabel) {
   renderBrush();
   setRange(state.currentRange || "all");
 
-  if (state.rawPoints.length >= 2) {
+  const supplySub = document.getElementById("metric-supply-sub");
+  if (hasOfficialCurrent) {
+    if (supplySub) {
+      supplySub.textContent = "Official Aave API current supply, normalized onto the visible history series";
+    }
+  } else if (state.rawPoints.length >= 2) {
     const prev = state.rawPoints[state.rawPoints.length - 2].value;
     const latest = state.rawPoints[state.rawPoints.length - 1].value;
     const dayChange = prev ? ((latest - prev) / prev) * 100 : 0;
-    const supplySub = document.getElementById("metric-supply-sub");
     if (supplySub) {
       const prefix = sourceLabel === "live" ? "Live" : "Snapshot";
       supplySub.textContent = `${prefix} daily move ${dayChange >= 0 ? "+" : ""}${dayChange.toFixed(2)}%`;
@@ -349,9 +483,18 @@ function hydrateData(data, sourceLabel) {
   const updatedAt = document.getElementById("metric-updated");
   if (updatedAt && state.rawPoints.length) {
     const latestPointDate = formatDateLong(state.rawPoints[state.rawPoints.length - 1].date);
-    updatedAt.textContent = `${sourceLabel === "live" ? "Live" : "Snapshot"} point: ${latestPointDate}`;
+    updatedAt.textContent = hasOfficialCurrent
+      ? `Official current · history ends ${latestPointDate}`
+      : `${sourceLabel === "live" ? "Live" : "Snapshot"} point: ${latestPointDate}`;
   }
 
+  setAaveStatus(
+    hasOfficialCurrent
+      ? "Official current via Aave API"
+      : sourceLabel === "live"
+        ? "Legacy history refresh"
+        : "Snapshot fallback"
+  );
   updateLegend();
 }
 
@@ -452,7 +595,7 @@ function renderChainBars() {
           <div class="chain-bar-track">
             <div class="chain-bar-fill" data-width="${pct.toFixed(2)}%" style="background:${meta.color}"></div>
           </div>
-          <div class="chain-meta">TVL ${formatCompactNumber(row.tvl)} · Borrowed ${formatCompactNumber(row.borrowed)}</div>
+          <div class="chain-meta">Available ${formatCompactNumber(row.tvl)} · Borrowed ${formatCompactNumber(row.borrowed)}</div>
         </div>
       `;
     })
@@ -833,7 +976,7 @@ function renderChart() {
         <div class="tooltip-series-block">
           <div class="tooltip-series-row">
             <span class="tooltip-swatch tooltip-swatch-aave"></span>
-            <span class="tooltip-series-name">Aave</span>
+            <span class="tooltip-series-name">Aave Supply</span>
             <strong>${formatCurrency(entry.value)}</strong>
           </div>
           <span class="tooltip-subchange ${pctChange >= 0 ? "positive" : "negative"}">
@@ -844,7 +987,7 @@ function renderChart() {
           <div class="tooltip-series-block">
             <div class="tooltip-series-row">
               <span class="tooltip-swatch tooltip-swatch-dolomite"></span>
-              <span class="tooltip-series-name">Dolomite</span>
+              <span class="tooltip-series-name">Dolomite Supply</span>
               <strong>${formatCurrency(compareEntry.value)}</strong>
             </div>
             <span class="tooltip-subchange ${comparePctChange >= 0 ? "positive" : "negative"}">
@@ -1025,45 +1168,65 @@ function bindBrush() {
 async function fetchData() {
   try {
     const snapshotResults = await Promise.allSettled([
-      fetchJson(SNAPSHOT_URL, 10000),
+      fetchJson(AAVE_HISTORY_SNAPSHOT_URL, 10000),
+      fetchJson(AAVE_CURRENT_SNAPSHOT_URL, 10000),
       fetchJson(COMPARE_SNAPSHOT_URL, 10000),
       fetchJson(COMPARE_CURRENT_SNAPSHOT_URL, 10000),
     ]);
+    const aaveSnapshotHistory =
+      snapshotResults[0].status === "fulfilled" ? snapshotResults[0].value : null;
+    const aaveSnapshotCurrent =
+      snapshotResults[1].status === "fulfilled" ? snapshotResults[1].value : null;
 
-    if (snapshotResults[0].status === "fulfilled") {
-      hydrateData(snapshotResults[0].value, "snapshot");
+    if (aaveSnapshotHistory) {
+      hydrateData(aaveSnapshotHistory, aaveSnapshotCurrent, "snapshot");
     } else {
       console.warn("Aave snapshot load failed:", snapshotResults[0].reason);
     }
 
-    if (snapshotResults[1].status === "fulfilled") {
+    if (snapshotResults[2].status === "fulfilled") {
       hydrateCompareData(
-        snapshotResults[1].value,
-        snapshotResults[2].status === "fulfilled" ? snapshotResults[2].value : null
+        snapshotResults[2].value,
+        snapshotResults[3].status === "fulfilled" ? snapshotResults[3].value : null
       );
     } else {
-      console.warn("Dolomite snapshot load failed:", snapshotResults[1].reason);
+      console.warn("Dolomite snapshot load failed:", snapshotResults[2].reason);
     }
 
     const liveResults = await Promise.allSettled([
-      fetchJson(API_URL, 15000),
+      fetchJson(AAVE_HISTORY_API_URL, 15000),
+      fetchGraphQL(AAVE_API_URL, AAVE_CHAINS_QUERY, undefined, 15000)
+        .then((payload) => {
+          const chainIds = (payload.chains || [])
+            .filter((chain) => !chain.isTestnet)
+            .map((chain) => chain.chainId);
+          return fetchGraphQL(AAVE_API_URL, AAVE_MARKETS_QUERY, { chainIds }, 15000);
+        }),
       fetchJson(COMPARE_API_URL, 15000),
       fetchJson(COMPARE_CURRENT_API_URL, 15000),
     ]);
+    const aaveLiveHistory = liveResults[0].status === "fulfilled" ? liveResults[0].value : null;
+    const aaveLiveCurrent = liveResults[1].status === "fulfilled" ? liveResults[1].value : null;
 
-    if (liveResults[0].status === "fulfilled") {
-      hydrateData(liveResults[0].value, "live");
+    if (aaveLiveHistory) {
+      hydrateData(aaveLiveHistory, aaveLiveCurrent || aaveSnapshotCurrent, "live");
+    } else if (aaveSnapshotHistory && aaveLiveCurrent) {
+      hydrateData(aaveSnapshotHistory, aaveLiveCurrent, "snapshot");
     } else {
       console.warn("Live refresh failed:", liveResults[0].reason);
     }
 
-    if (liveResults[1].status === "fulfilled") {
+    if (!aaveLiveCurrent && liveResults[1].status !== "fulfilled") {
+      console.warn("Official Aave current refresh failed:", liveResults[1].reason);
+    }
+
+    if (liveResults[2].status === "fulfilled") {
       hydrateCompareData(
-        liveResults[1].value,
-        liveResults[2].status === "fulfilled" ? liveResults[2].value : null
+        liveResults[2].value,
+        liveResults[3].status === "fulfilled" ? liveResults[3].value : null
       );
     } else {
-      console.warn("Dolomite refresh failed:", liveResults[1].reason);
+      console.warn("Dolomite refresh failed:", liveResults[2].reason);
     }
 
     if (!state.rawPoints.length) {

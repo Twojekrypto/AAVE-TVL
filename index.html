@@ -6,7 +6,7 @@
   <title>Aave Supply Dashboard</title>
   <meta
     name="description"
-    content="Live Aave supply dashboard with gross supply, borrowed liquidity, chain breakdown, and an interactive Supply Over Time comparison."
+    content="Aave supply dashboard with official current data from the Aave API, borrowed liquidity, chain breakdown, and a Supply Over Time comparison."
   >
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -29,13 +29,13 @@
         <div>
           <p class="eyebrow">Aave Analytics</p>
           <h1>Aave Supply Dashboard</h1>
-          <p class="subhead">Live gross-supply view styled around your existing TVL and Supply Over Time layout.</p>
+          <p class="subhead">Official current-supply view styled around your existing TVL and Supply Over Time layout.</p>
         </div>
       </div>
 
       <div class="status-pill">
         <span class="live-dot"></span>
-        <span>Live via DefiLlama</span>
+        <span id="status-copy">Official current via Aave API</span>
       </div>
     </header>
 
@@ -50,26 +50,26 @@
             </div>
             <div id="hero-badge" class="delta-badge hidden"></div>
           </div>
-          <p class="formula-note">Chart target: <strong>gross supply</strong>. For Aave, DefiLlama TVL excludes borrowed assets, so gross supply is reconstructed as <strong>TVL + Borrowed</strong>.</p>
+          <p class="formula-note">Current Aave supply comes from the official <strong>Aave GraphQL API</strong>. Borrowed is derived as <strong>Supply - Available Liquidity</strong>; history is temporarily normalized from the legacy series.</p>
         </div>
 
         <div class="metric-grid">
           <article class="metric-card">
-            <span class="metric-label">Gross Supply</span>
+            <span class="metric-label">Supply</span>
             <strong id="metric-supply">—</strong>
-            <span id="metric-supply-sub" class="metric-sub">Current protocol-wide gross supplied liquidity</span>
+            <span id="metric-supply-sub" class="metric-sub">Current protocol-wide supplied liquidity</span>
           </article>
 
           <article class="metric-card">
-            <span class="metric-label">TVL Only</span>
+            <span class="metric-label">Available Liquidity</span>
             <strong id="metric-tvl">—</strong>
-            <span class="metric-sub">Collateral locked, excluding borrowed balances</span>
+            <span class="metric-sub">Currently unborrowed liquidity from the official Aave markets</span>
           </article>
 
           <article class="metric-card">
             <span class="metric-label">Borrowed</span>
             <strong id="metric-borrowed">—</strong>
-            <span class="metric-sub">Borrowed liquidity across all tracked Aave markets</span>
+            <span class="metric-sub">Derived from official market size minus available liquidity</span>
           </article>
 
           <article class="metric-card">
@@ -129,14 +129,14 @@
               <div class="legend-item">
                 <span class="legend-swatch legend-swatch-aave"></span>
                 <div class="legend-copy">
-                  <strong>Aave Gross Supply</strong>
+                  <strong>Aave Supply</strong>
                   <span id="legend-aave-value">—</span>
                 </div>
               </div>
               <div class="legend-item">
                 <span class="legend-swatch legend-swatch-dolomite"></span>
                 <div class="legend-copy">
-                  <strong>Dolomite Gross Supply</strong>
+                  <strong>Dolomite Supply</strong>
                   <span id="legend-dolomite-value">—</span>
                 </div>
               </div>
@@ -174,7 +174,9 @@
       <section class="source-strip">
         <div>
           <span class="source-label">Source</span>
-          <a href="https://api.llama.fi/protocol/aave" target="_blank" rel="noreferrer">api.llama.fi/protocol/aave</a>
+          <a href="https://api.v3.aave.com/graphql" target="_blank" rel="noreferrer">api.v3.aave.com/graphql</a>
+          <span class="source-divider">·</span>
+          <a href="https://api.llama.fi/protocol/aave" target="_blank" rel="noreferrer">api.llama.fi/protocol/aave (history backfill)</a>
           <span class="source-divider">·</span>
           <a href="https://twojekrypto.github.io/vedolo-dashboard/defillama_data.json" target="_blank" rel="noreferrer">vedolo-dashboard/defillama_data.json</a>
           <span class="source-divider">·</span>
