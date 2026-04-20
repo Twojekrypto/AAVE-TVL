@@ -1,4 +1,5 @@
 const API_URL = "https://api.llama.fi/protocol/aave";
+const SNAPSHOT_URL = "./aave_data.json";
 const NON_CHAIN_KEYS = new Set([
   "borrowed",
   "staking",
@@ -163,6 +164,26 @@ function setCoverage(chains) {
   coverage.textContent = `${chains.length} active Aave chains in the current snapshot`;
 }
 
+async function fetchJson(url, timeoutMs) {
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const response = await fetch(url, {
+      signal: controller.signal,
+      cache: url === SNAPSHOT_URL ? "default" : "no-store",
+    });
+
+    if (!response.ok) {
+      throw new Error(`${url} returned ${response.status}`);
+    }
+
+    return await response.json();
+  } finally {
+    window.clearTimeout(timeout);
+  }
+}
+
 function showError(message) {
   const chainBars = document.getElementById("chain-bars");
   const chartWrap = document.getElementById("chart-wrap");
@@ -213,6 +234,53 @@ function buildChainRows(currentChainTvls) {
 
   rows.sort((left, right) => right.supply - left.supply);
   return { rows, totalTvl };
+}
+
+function hydrateData(data, sourceLabel) {
+  const currentChainTvls = data.currentChainTvls || {};
+  const { rows, totalTvl } = buildChainRows(currentChainTvls);
+  const totalBorrowed = currentChainTvls.borrowed || 0;
+  const liveSupply = totalTvl + totalBorrowed;
+
+  const borrowedHistory = data.chainTvls?.borrowed?.tvl || [];
+  const borrowedMap = new Map(
+    borrowedHistory.map((point) => [point.date, point.totalLiquidityUSD])
+  );
+
+  const rawSeries = (data.tvl || []).map((point) => ({
+    date: new Date(point.date * 1000),
+    value: point.totalLiquidityUSD + (borrowedMap.get(point.date) || 0),
+  }));
+
+  state.chainRows = rows;
+  state.latestTvl = totalTvl;
+  state.latestBorrowed = totalBorrowed;
+  state.latestSupply = liveSupply;
+  state.rawPoints = normalizeSeries(rawSeries, liveSupply);
+  state.rangePoints = [...state.rawPoints];
+  state.visiblePoints = [...state.rawPoints];
+
+  setCoverage(rows);
+  renderChainBars();
+  renderBrush();
+  setRange(state.currentRange || "all");
+
+  if (state.rawPoints.length >= 2) {
+    const prev = state.rawPoints[state.rawPoints.length - 2].value;
+    const latest = state.rawPoints[state.rawPoints.length - 1].value;
+    const dayChange = prev ? ((latest - prev) / prev) * 100 : 0;
+    const supplySub = document.getElementById("metric-supply-sub");
+    if (supplySub) {
+      const prefix = sourceLabel === "live" ? "Live" : "Snapshot";
+      supplySub.textContent = `${prefix} daily move ${dayChange >= 0 ? "+" : ""}${dayChange.toFixed(2)}%`;
+    }
+  }
+
+  const updatedAt = document.getElementById("metric-updated");
+  if (updatedAt && state.rawPoints.length) {
+    const latestPointDate = formatDateLong(state.rawPoints[state.rawPoints.length - 1].date);
+    updatedAt.textContent = `${sourceLabel === "live" ? "Live" : "Snapshot"} point: ${latestPointDate}`;
+  }
 }
 
 function normalizeSeries(series, liveSupply) {
@@ -755,57 +823,25 @@ function bindBrush() {
 }
 
 async function fetchData() {
-  const controller = new AbortController();
-  const timeout = window.setTimeout(() => controller.abort(), 15000);
-
   try {
-    const response = await fetch(API_URL, { signal: controller.signal });
-    if (!response.ok) {
-      throw new Error(`API returned ${response.status}`);
+    try {
+      const snapshotData = await fetchJson(SNAPSHOT_URL, 10000);
+      hydrateData(snapshotData, "snapshot");
+    } catch (snapshotError) {
+      console.warn("Snapshot load failed:", snapshotError);
     }
 
-    const data = await response.json();
-    const currentChainTvls = data.currentChainTvls || {};
-    const { rows, totalTvl } = buildChainRows(currentChainTvls);
-    const totalBorrowed = currentChainTvls.borrowed || 0;
-    const liveSupply = totalTvl + totalBorrowed;
-
-    const borrowedHistory = data.chainTvls?.borrowed?.tvl || [];
-    const borrowedMap = new Map(
-      borrowedHistory.map((point) => [point.date, point.totalLiquidityUSD])
-    );
-
-    const rawSeries = (data.tvl || []).map((point) => ({
-      date: new Date(point.date * 1000),
-      value: point.totalLiquidityUSD + (borrowedMap.get(point.date) || 0),
-    }));
-
-    state.chainRows = rows;
-    state.latestTvl = totalTvl;
-    state.latestBorrowed = totalBorrowed;
-    state.latestSupply = liveSupply;
-    state.rawPoints = normalizeSeries(rawSeries, liveSupply);
-    state.rangePoints = [...state.rawPoints];
-    state.visiblePoints = [...state.rawPoints];
-
-    setCoverage(rows);
-    renderChainBars();
-    renderBrush();
-    setRange("all");
-
-    if (state.rawPoints.length >= 2) {
-      const prev = state.rawPoints[state.rawPoints.length - 2].value;
-      const latest = state.rawPoints[state.rawPoints.length - 1].value;
-      const dayChange = prev ? ((latest - prev) / prev) * 100 : 0;
-      const supplySub = document.getElementById("metric-supply-sub");
-      if (supplySub) {
-        supplySub.textContent = `Daily move ${dayChange >= 0 ? "+" : ""}${dayChange.toFixed(2)}%`;
+    try {
+      const liveData = await fetchJson(API_URL, 15000);
+      hydrateData(liveData, "live");
+    } catch (liveError) {
+      console.warn("Live refresh failed:", liveError);
+      if (!state.rawPoints.length) {
+        throw liveError;
       }
     }
   } catch (error) {
     showError(error instanceof Error ? error.message : "Unknown error");
-  } finally {
-    window.clearTimeout(timeout);
   }
 }
 
