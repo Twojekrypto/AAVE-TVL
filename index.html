@@ -6,7 +6,7 @@
   <title>Aave Supply Dashboard</title>
   <meta
     name="description"
-    content="Live Aave supply dashboard with total supply, borrowed liquidity, chain breakdown, and an interactive Supply Over Time chart."
+    content="Live Aave supply dashboard with gross supply, borrowed liquidity, chain breakdown, and an interactive Supply Over Time comparison."
   >
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -29,7 +29,7 @@
         <div>
           <p class="eyebrow">Aave Analytics</p>
           <h1>Aave Supply Dashboard</h1>
-          <p class="subhead">Live supply view styled around your existing TVL and Supply Over Time layout.</p>
+          <p class="subhead">Live gross-supply view styled around your existing TVL and Supply Over Time layout.</p>
         </div>
       </div>
 
@@ -50,14 +50,14 @@
             </div>
             <div id="hero-badge" class="delta-badge hidden"></div>
           </div>
-          <p class="formula-note">Formula: <strong>Total Supply = TVL + Borrowed</strong></p>
+          <p class="formula-note">Chart target: <strong>gross supply</strong>. For Aave, DefiLlama TVL excludes borrowed assets, so gross supply is reconstructed as <strong>TVL + Borrowed</strong>.</p>
         </div>
 
         <div class="metric-grid">
           <article class="metric-card">
-            <span class="metric-label">Total Supply</span>
+            <span class="metric-label">Gross Supply</span>
             <strong id="metric-supply">—</strong>
-            <span id="metric-supply-sub" class="metric-sub">Current protocol-wide supplied liquidity</span>
+            <span id="metric-supply-sub" class="metric-sub">Current protocol-wide gross supplied liquidity</span>
           </article>
 
           <article class="metric-card">
@@ -129,14 +129,14 @@
               <div class="legend-item">
                 <span class="legend-swatch legend-swatch-aave"></span>
                 <div class="legend-copy">
-                  <strong>Aave Supply</strong>
+                  <strong>Aave Gross Supply</strong>
                   <span id="legend-aave-value">—</span>
                 </div>
               </div>
               <div class="legend-item">
                 <span class="legend-swatch legend-swatch-dolomite"></span>
                 <div class="legend-copy">
-                  <strong>Dolomite Supply</strong>
+                  <strong>Dolomite Gross Supply</strong>
                   <span id="legend-dolomite-value">—</span>
                 </div>
               </div>
@@ -177,6 +177,8 @@
           <a href="https://api.llama.fi/protocol/aave" target="_blank" rel="noreferrer">api.llama.fi/protocol/aave</a>
           <span class="source-divider">·</span>
           <a href="https://twojekrypto.github.io/vedolo-dashboard/defillama_data.json" target="_blank" rel="noreferrer">vedolo-dashboard/defillama_data.json</a>
+          <span class="source-divider">·</span>
+          <a href="https://twojekrypto.github.io/vedolo-dashboard/dolomite_tvl.json" target="_blank" rel="noreferrer">vedolo-dashboard/dolomite_tvl.json</a>
         </div>
         <div>
           <span class="source-label">Coverage</span>

@@ -2,6 +2,8 @@ const API_URL = "https://api.llama.fi/protocol/aave";
 const SNAPSHOT_URL = "./aave_data.json";
 const COMPARE_API_URL = "https://twojekrypto.github.io/vedolo-dashboard/defillama_data.json";
 const COMPARE_SNAPSHOT_URL = "./dolomite_data.json";
+const COMPARE_CURRENT_API_URL = "https://twojekrypto.github.io/vedolo-dashboard/dolomite_tvl.json";
+const COMPARE_CURRENT_SNAPSHOT_URL = "./dolomite_current.json";
 const NON_CHAIN_KEYS = new Set([
   "borrowed",
   "staking",
@@ -250,28 +252,51 @@ function buildChainRows(currentChainTvls) {
   return { rows, totalTvl };
 }
 
+function deriveGrossSupplyFromCurrentMap(currentChainTvls) {
+  let grossSupply = 0;
+  let chainCount = 0;
+
+  Object.entries(currentChainTvls || {}).forEach(([key, value]) => {
+    if (
+      key.includes("-") ||
+      NON_CHAIN_KEYS.has(key.toLowerCase()) ||
+      typeof value !== "number" ||
+      value <= 0
+    ) {
+      return;
+    }
+
+    grossSupply += value;
+    chainCount += 1;
+  });
+
+  return { grossSupply, chainCount };
+}
+
+function buildHistorySupplySeries(data) {
+  const borrowedHistory = data.chainTvls?.borrowed?.tvl || [];
+  const borrowedMap = new Map(
+    borrowedHistory.map((point) => [point.date, point.totalLiquidityUSD])
+  );
+
+  return (data.tvl || []).map((point) => ({
+    date: new Date(point.date * 1000),
+    value: point.totalLiquidityUSD + (borrowedMap.get(point.date) || 0),
+  }));
+}
+
 function buildProtocolSnapshot(data) {
   const currentChainTvls = data.currentChainTvls || {};
   const { rows, totalTvl } = buildChainRows(currentChainTvls);
   const totalBorrowed = currentChainTvls.borrowed || 0;
   const liveSupply = totalTvl + totalBorrowed;
 
-  const borrowedHistory = data.chainTvls?.borrowed?.tvl || [];
-  const borrowedMap = new Map(
-    borrowedHistory.map((point) => [point.date, point.totalLiquidityUSD])
-  );
-
-  const rawSeries = (data.tvl || []).map((point) => ({
-    date: new Date(point.date * 1000),
-    value: point.totalLiquidityUSD + (borrowedMap.get(point.date) || 0),
-  }));
-
   return {
     rows,
     totalTvl,
     totalBorrowed,
     liveSupply,
-    rawPoints: normalizeSeries(rawSeries, liveSupply),
+    rawPoints: normalizeSeries(buildHistorySupplySeries(data), liveSupply),
   };
 }
 
@@ -330,11 +355,15 @@ function hydrateData(data, sourceLabel) {
   updateLegend();
 }
 
-function hydrateCompareData(data) {
-  const snapshot = buildProtocolSnapshot(data);
-  state.compareRawPoints = snapshot.rawPoints;
-  state.compareLatestSupply = snapshot.liveSupply;
-  state.compareChainCount = snapshot.rows.length;
+function hydrateCompareData(historyData, currentData) {
+  const historySeries = buildHistorySupplySeries(historyData);
+  const currentMap = currentData?.currentChainTvls || {};
+  const derivedCurrent = deriveGrossSupplyFromCurrentMap(currentMap);
+  const targetSupply = currentData?.supplyLiquidity || derivedCurrent.grossSupply || historySeries[historySeries.length - 1]?.value || 0;
+
+  state.compareRawPoints = normalizeSeries(historySeries, targetSupply, 0.5, 2.1);
+  state.compareLatestSupply = targetSupply;
+  state.compareChainCount = derivedCurrent.chainCount;
 
   if (state.rangePoints.length) {
     setRange(state.currentRange || "all");
@@ -344,7 +373,7 @@ function hydrateCompareData(data) {
   }
 }
 
-function normalizeSeries(series, liveSupply) {
+function normalizeSeries(series, liveSupply, minRatio = 0.55, maxRatio = 1.45) {
   if (!series.length || !Number.isFinite(liveSupply) || liveSupply <= 0) {
     return series;
   }
@@ -355,7 +384,7 @@ function normalizeSeries(series, liveSupply) {
   }
 
   const ratio = liveSupply / lastValue;
-  if (ratio < 0.55 || ratio > 1.45) {
+  if (ratio < minRatio || ratio > maxRatio) {
     return series;
   }
 
@@ -998,6 +1027,7 @@ async function fetchData() {
     const snapshotResults = await Promise.allSettled([
       fetchJson(SNAPSHOT_URL, 10000),
       fetchJson(COMPARE_SNAPSHOT_URL, 10000),
+      fetchJson(COMPARE_CURRENT_SNAPSHOT_URL, 10000),
     ]);
 
     if (snapshotResults[0].status === "fulfilled") {
@@ -1007,7 +1037,10 @@ async function fetchData() {
     }
 
     if (snapshotResults[1].status === "fulfilled") {
-      hydrateCompareData(snapshotResults[1].value);
+      hydrateCompareData(
+        snapshotResults[1].value,
+        snapshotResults[2].status === "fulfilled" ? snapshotResults[2].value : null
+      );
     } else {
       console.warn("Dolomite snapshot load failed:", snapshotResults[1].reason);
     }
@@ -1015,6 +1048,7 @@ async function fetchData() {
     const liveResults = await Promise.allSettled([
       fetchJson(API_URL, 15000),
       fetchJson(COMPARE_API_URL, 15000),
+      fetchJson(COMPARE_CURRENT_API_URL, 15000),
     ]);
 
     if (liveResults[0].status === "fulfilled") {
@@ -1024,7 +1058,10 @@ async function fetchData() {
     }
 
     if (liveResults[1].status === "fulfilled") {
-      hydrateCompareData(liveResults[1].value);
+      hydrateCompareData(
+        liveResults[1].value,
+        liveResults[2].status === "fulfilled" ? liveResults[2].value : null
+      );
     } else {
       console.warn("Dolomite refresh failed:", liveResults[1].reason);
     }
