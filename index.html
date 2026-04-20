@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aave Supply Dashboard</title>
+  <meta
+    name="description"
+    content="Live Aave supply dashboard with total supply, borrowed liquidity, chain breakdown, and an interactive Supply Over Time chart."
+  >
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap"
+    rel="stylesheet"
+  >
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <div class="page-glow page-glow-a"></div>
+  <div class="page-glow page-glow-b"></div>
+
+  <div class="site-shell">
+    <header class="topbar">
+      <div class="brand-block">
+        <div class="brand-mark">
+          <img src="https://icons.llama.fi/aave-v3.png" alt="Aave">
+        </div>
+        <div>
+          <p class="eyebrow">Aave Analytics</p>
+          <h1>Aave Supply Dashboard</h1>
+          <p class="subhead">Live supply view styled around your existing TVL and Supply Over Time layout.</p>
+        </div>
+      </div>
+
+      <div class="status-pill">
+        <span class="live-dot"></span>
+        <span>Live via DefiLlama</span>
+      </div>
+    </header>
+
+    <main class="dashboard">
+      <section class="hero-panel">
+        <div class="hero-copy">
+          <p class="panel-kicker">Current protocol snapshot</p>
+          <div class="headline-row">
+            <div>
+              <h2 id="hero-supply">Loading...</h2>
+              <p id="hero-change" class="hero-change">Waiting for latest Aave supply series...</p>
+            </div>
+            <div id="hero-badge" class="delta-badge hidden"></div>
+          </div>
+          <p class="formula-note">Formula: <strong>Total Supply = TVL + Borrowed</strong></p>
+        </div>
+
+        <div class="metric-grid">
+          <article class="metric-card">
+            <span class="metric-label">Total Supply</span>
+            <strong id="metric-supply">—</strong>
+            <span id="metric-supply-sub" class="metric-sub">Current protocol-wide supplied liquidity</span>
+          </article>
+
+          <article class="metric-card">
+            <span class="metric-label">TVL Only</span>
+            <strong id="metric-tvl">—</strong>
+            <span class="metric-sub">Collateral locked, excluding borrowed balances</span>
+          </article>
+
+          <article class="metric-card">
+            <span class="metric-label">Borrowed</span>
+            <strong id="metric-borrowed">—</strong>
+            <span class="metric-sub">Borrowed liquidity across all tracked Aave markets</span>
+          </article>
+
+          <article class="metric-card">
+            <span class="metric-label">Utilization</span>
+            <strong id="metric-utilization">—</strong>
+            <span class="metric-sub">Borrowed as a share of total supplied liquidity</span>
+          </article>
+
+          <article class="metric-card">
+            <span class="metric-label">Active Chains</span>
+            <strong id="metric-chains">—</strong>
+            <span id="metric-updated" class="metric-sub">Latest refresh pending</span>
+          </article>
+        </div>
+      </section>
+
+      <section class="analytics-grid">
+        <article class="panel chain-panel">
+          <div class="panel-header">
+            <div>
+              <p class="panel-kicker">Breakdown</p>
+              <h3>Supply by Chain</h3>
+            </div>
+            <div class="chain-summary">
+              <span id="chain-summary-supply">—</span>
+              <span class="summary-separator"></span>
+              <span id="chain-summary-borrowed">—</span>
+            </div>
+          </div>
+
+          <div id="chain-bars" class="chain-bars">
+            <div class="loading-state">Loading chain distribution...</div>
+          </div>
+        </article>
+
+        <article class="panel chart-panel">
+          <div class="panel-header chart-header">
+            <div>
+              <p class="panel-kicker">Interactive history</p>
+              <h3>Supply Over Time</h3>
+            </div>
+
+            <div class="chart-toolbar">
+              <div class="range-pills" id="range-pills">
+                <button type="button" data-range="30">30D</button>
+                <button type="button" data-range="90">90D</button>
+                <button type="button" data-range="180">180D</button>
+                <button type="button" data-range="365">1Y</button>
+                <button type="button" data-range="all" class="active">ALL</button>
+              </div>
+              <button id="reset-zoom" class="reset-button hidden" type="button">Reset zoom</button>
+            </div>
+          </div>
+
+          <div id="chart-wrap" class="chart-wrap">
+            <div id="chart-tooltip" class="chart-tooltip hidden"></div>
+            <svg id="chart-svg" preserveAspectRatio="none" aria-hidden="true"></svg>
+          </div>
+
+          <div id="chart-axis" class="chart-axis"></div>
+
+          <div id="brush-label" class="brush-label">Showing full history</div>
+
+          <div id="brush-wrap" class="brush-wrap">
+            <svg id="brush-svg" preserveAspectRatio="none" aria-hidden="true"></svg>
+            <div id="brush-overlay" class="brush-overlay">
+              <div id="brush-dim-left" class="brush-dim brush-dim-left"></div>
+              <div id="brush-window" class="brush-window">
+                <div id="brush-handle-left" class="brush-handle brush-handle-left">
+                  <span></span><span></span>
+                </div>
+                <div id="brush-handle-right" class="brush-handle brush-handle-right">
+                  <span></span><span></span>
+                </div>
+              </div>
+              <div id="brush-dim-right" class="brush-dim brush-dim-right"></div>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <section class="source-strip">
+        <div>
+          <span class="source-label">Source</span>
+          <a href="https://api.llama.fi/protocol/aave" target="_blank" rel="noreferrer">api.llama.fi/protocol/aave</a>
+        </div>
+        <div>
+          <span class="source-label">Coverage</span>
+          <span id="coverage-text">Loading markets...</span>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="./script.js"></script>
+</body>
+</html>
