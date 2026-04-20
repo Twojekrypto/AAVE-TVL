@@ -860,7 +860,7 @@ function renderChart() {
     .join("");
   const compareLabels = hasCompareSeries
     ? compareTicks
-      .map((tick) => `<text x="${width - padRight + 12}" y="${(tick.y + 4).toFixed(1)}" fill="rgba(245,191,97,0.72)" font-size="10" font-family="'JetBrains Mono', monospace" text-anchor="start">${formatCompactNumber(tick.value)}</text>`)
+      .map((tick) => `<text x="${width - padRight + 12}" y="${(tick.y + 4).toFixed(1)}" fill="rgba(255,210,122,0.96)" font-size="10" font-family="'JetBrains Mono', monospace" text-anchor="start">${formatCompactNumber(tick.value)}</text>`)
       .join("")
     : "";
 
@@ -871,31 +871,53 @@ function renderChart() {
         <rect x="${padLeft}" y="${padTop}" width="${innerWidth}" height="${innerHeight}" rx="0" />
       </clipPath>
       <linearGradient id="area-gradient" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stop-color="rgba(124, 165, 255, 0.36)" />
-        <stop offset="55%" stop-color="rgba(124, 165, 255, 0.09)" />
+        <stop offset="0%" stop-color="rgba(124, 165, 255, 0.24)" />
+        <stop offset="55%" stop-color="rgba(124, 165, 255, 0.06)" />
         <stop offset="100%" stop-color="rgba(124, 165, 255, 0.02)" />
       </linearGradient>
       <linearGradient id="line-gradient" x1="0" y1="0" x2="1" y2="0">
-        <stop offset="0%" stop-color="#7ca5ff" />
-        <stop offset="55%" stop-color="#63e1ff" />
-        <stop offset="100%" stop-color="#ff7cb7" />
+        <stop offset="0%" stop-color="rgba(124, 165, 255, 0.78)" />
+        <stop offset="55%" stop-color="rgba(99, 225, 255, 0.76)" />
+        <stop offset="100%" stop-color="rgba(255, 124, 183, 0.74)" />
       </linearGradient>
       <linearGradient id="compare-line-gradient" x1="0" y1="0" x2="1" y2="0">
-        <stop offset="0%" stop-color="#f5bf61" />
+        <stop offset="0%" stop-color="#ffd86f" />
+        <stop offset="52%" stop-color="#ffb85c" />
         <stop offset="100%" stop-color="#ff7cb7" />
       </linearGradient>
+      <filter id="compare-line-glow" x="-20%" y="-35%" width="140%" height="170%">
+        <feGaussianBlur stdDeviation="4.5" result="blur" />
+        <feColorMatrix
+          in="blur"
+          type="matrix"
+          values="1 0 0 0 0
+                  0 0.86 0 0 0
+                  0 0 0.55 0 0
+                  0 0 0 0.9 0"
+          result="glow"
+        />
+        <feMerge>
+          <feMergeNode in="glow" />
+          <feMergeNode in="SourceGraphic" />
+        </feMerge>
+      </filter>
     </defs>
     ${grid}
     ${labels}
     ${compareLabels}
     <g clip-path="url(#chart-clip)">
       <path d="${areaPath}" fill="url(#area-gradient)" />
-      <path d="${linePath}" fill="none" stroke="url(#line-gradient)" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" />
-      ${hasCompareSeries ? `<path d="${compareLinePath}" fill="none" stroke="url(#compare-line-gradient)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="6 5" />` : ""}
+      <path d="${linePath}" fill="none" stroke="rgba(124, 165, 255, 0.18)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
+      <path d="${linePath}" fill="none" stroke="url(#line-gradient)" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" />
+      ${hasCompareSeries ? `
+        <path d="${compareLinePath}" fill="none" stroke="rgba(255, 216, 111, 0.28)" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" filter="url(#compare-line-glow)" />
+        <path d="${compareLinePath}" fill="none" stroke="rgba(255, 255, 255, 0.26)" stroke-width="5.2" stroke-linecap="round" stroke-linejoin="round" />
+        <path d="${compareLinePath}" fill="none" stroke="url(#compare-line-gradient)" stroke-width="3.35" stroke-linecap="round" stroke-linejoin="round" />
+      ` : ""}
     </g>
     <line id="hover-line" x1="0" y1="${padTop}" x2="0" y2="${height - padBottom}" stroke="rgba(255,255,255,0.22)" stroke-width="1" opacity="0" />
     <circle id="hover-dot" cx="0" cy="0" r="4.5" fill="#7ca5ff" stroke="#08101f" stroke-width="2" opacity="0" />
-    <circle id="hover-dot-compare" cx="0" cy="0" r="4.2" fill="#f5bf61" stroke="#08101f" stroke-width="2" opacity="0" />
+    <circle id="hover-dot-compare" cx="0" cy="0" r="5.6" fill="#ffd86f" stroke="#08101f" stroke-width="2.4" opacity="0" />
   `;
 
   const spanDays = (state.visiblePoints[state.visiblePoints.length - 1].date - state.visiblePoints[0].date) / (1000 * 60 * 60 * 24);

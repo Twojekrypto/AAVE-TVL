@@ -494,6 +494,12 @@ h1 {
   border: 1px solid rgba(161, 182, 255, 0.08);
 }
 
+.legend-item-emphasis {
+  background: linear-gradient(135deg, rgba(245, 191, 97, 0.12), rgba(255, 124, 183, 0.08));
+  border-color: rgba(245, 191, 97, 0.22);
+  box-shadow: 0 12px 30px rgba(245, 191, 97, 0.08);
+}
+
 .legend-swatch {
   width: 14px;
   height: 14px;
@@ -508,7 +514,7 @@ h1 {
 
 .legend-swatch-dolomite {
   background: linear-gradient(135deg, #f5bf61, #ff7cb7);
-  box-shadow: 0 0 20px rgba(245, 191, 97, 0.28);
+  box-shadow: 0 0 26px rgba(245, 191, 97, 0.42);
 }
 
 .legend-copy {
@@ -712,6 +718,7 @@ h1 {
 
 .tooltip-swatch-dolomite {
   background: #f5bf61;
+  box-shadow: 0 0 14px rgba(245, 191, 97, 0.45);
 }
 
 .tooltip-subchange {
