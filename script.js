@@ -1228,6 +1228,7 @@ function bindBrush() {
   }
 
   let mode = null;
+  let activePointerId = null;
   let startX = 0;
   let startBrushStart = 0;
   let startBrushEnd = 0;
@@ -1237,28 +1238,44 @@ function bindBrush() {
   }
 
   function beginDrag(nextMode, event) {
+    if (event.button !== undefined && event.button !== 0) {
+      return;
+    }
+
     event.preventDefault();
     event.stopPropagation();
     mode = nextMode;
+    activePointerId = event.pointerId ?? null;
     startX = event.clientX;
     startBrushStart = state.brushStart;
     startBrushEnd = state.brushEnd;
     document.body.style.cursor = nextMode === "pan" ? "grabbing" : "ew-resize";
+    document.body.style.userSelect = "none";
+
+    if (typeof event.currentTarget?.setPointerCapture === "function" && activePointerId !== null) {
+      event.currentTarget.setPointerCapture(activePointerId);
+    }
   }
 
-  leftHandle.addEventListener("mousedown", (event) => beginDrag("left", event));
-  rightHandle.addEventListener("mousedown", (event) => beginDrag("right", event));
-  windowEl.addEventListener("mousedown", (event) => {
+  leftHandle.addEventListener("pointerdown", (event) => beginDrag("left", event));
+  rightHandle.addEventListener("pointerdown", (event) => beginDrag("right", event));
+  windowEl.addEventListener("pointerdown", (event) => {
     if (event.target === leftHandle || event.target === rightHandle) {
       return;
     }
     beginDrag("pan", event);
   });
 
-  document.addEventListener("mousemove", (event) => {
+  document.addEventListener("pointermove", (event) => {
     if (!mode) {
       return;
     }
+
+    if (activePointerId !== null && event.pointerId !== activePointerId) {
+      return;
+    }
+
+    event.preventDefault();
 
     const width = overlayWidth();
     const delta = (event.clientX - startX) / width;
@@ -1289,16 +1306,25 @@ function bindBrush() {
 
     updateBrushOverlay();
     applyBrush();
-  });
+  }, { passive: false });
 
-  document.addEventListener("mouseup", () => {
+  function endDrag(event) {
     if (!mode) {
       return;
     }
 
+    if (activePointerId !== null && event?.pointerId !== undefined && event.pointerId !== activePointerId) {
+      return;
+    }
+
     mode = null;
+    activePointerId = null;
     document.body.style.cursor = "";
-  });
+    document.body.style.userSelect = "";
+  }
+
+  document.addEventListener("pointerup", endDrag);
+  document.addEventListener("pointercancel", endDrag);
 }
 
 async function fetchData() {
