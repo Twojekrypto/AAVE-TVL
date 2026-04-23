@@ -432,8 +432,15 @@ function buildAaveSnapshot(historyData, currentData = null) {
 }
 
 function updateLegend() {
-  setMetric("legend-aave-value", formatCurrency(state.latestSupply));
-  setMetric("legend-dolomite-value", formatCurrency(state.compareLatestSupply));
+  const aaveLegendValue = state.visiblePoints.length
+    ? state.visiblePoints[state.visiblePoints.length - 1].value
+    : state.latestSupply;
+  const dolomiteLegendValue = state.compareVisiblePoints.length
+    ? state.compareVisiblePoints[state.compareVisiblePoints.length - 1].value
+    : state.compareLatestSupply;
+
+  setMetric("legend-aave-value", formatCurrency(aaveLegendValue));
+  setMetric("legend-dolomite-value", formatCurrency(dolomiteLegendValue));
 }
 
 function updateChartContext() {
