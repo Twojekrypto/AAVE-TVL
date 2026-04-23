@@ -661,10 +661,14 @@ function syncChainPanelHeight() {
   }
 
   if (window.innerWidth <= 1120) {
+    chainPanel.style.height = "";
+    chainPanel.style.minHeight = "";
+    chainBars.style.height = "";
     chainBars.style.maxHeight = "";
     return;
   }
 
+  const heroHeight = Math.ceil(heroPanel.getBoundingClientRect().height);
   const panelStyle = window.getComputedStyle(chainPanel);
   const headerStyle = window.getComputedStyle(chainHeader);
   const paddingTop = parseFloat(panelStyle.paddingTop) || 0;
@@ -672,13 +676,16 @@ function syncChainPanelHeight() {
   const headerMarginBottom = parseFloat(headerStyle.marginBottom) || 0;
   const availableHeight = Math.max(
     220,
-    heroPanel.getBoundingClientRect().height
+    heroHeight
       - paddingTop
       - paddingBottom
       - chainHeader.getBoundingClientRect().height
       - headerMarginBottom
   );
 
+  chainPanel.style.height = `${heroHeight}px`;
+  chainPanel.style.minHeight = `${heroHeight}px`;
+  chainBars.style.height = `${availableHeight}px`;
   chainBars.style.maxHeight = `${availableHeight}px`;
 }
 
