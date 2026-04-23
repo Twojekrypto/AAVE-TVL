@@ -129,15 +129,12 @@
           </div>
         </div>
 
-        <div class="chart-compare-meta">
-          <div class="chart-legend">
+        <div id="chart-wrap" class="chart-wrap">
+          <div class="chart-legend chart-legend-floating" aria-hidden="true">
             <div class="legend-item">
               <span class="legend-swatch legend-swatch-aave"></span>
               <div class="legend-copy">
-                <div class="legend-head">
-                  <strong>Aave Supply</strong>
-                  <span class="legend-badge">Visible range</span>
-                </div>
+                <strong>Aave Supply</strong>
                 <span id="legend-aave-value" class="legend-value">—</span>
                 <span id="legend-aave-date" class="legend-meta">Visible end · —</span>
               </div>
@@ -145,33 +142,19 @@
             <div class="legend-item legend-item-emphasis">
               <span class="legend-swatch legend-swatch-dolomite"></span>
               <div class="legend-copy">
-                <div class="legend-head">
-                  <strong>Dolomite Supply</strong>
-                  <span class="legend-badge legend-badge-emphasis">Visible range</span>
-                </div>
+                <strong>Dolomite Supply</strong>
                 <span id="legend-dolomite-value" class="legend-value">—</span>
                 <span id="legend-dolomite-date" class="legend-meta">Visible end · —</span>
               </div>
             </div>
           </div>
-          <div class="chart-context">
-            <div class="chart-scope-guide">
-              <span class="scope-badge">Top metrics = Current</span>
-              <span class="scope-badge scope-badge-visible">Chart legend = Visible range</span>
-            </div>
-            <div id="chart-axis-hint" class="chart-axis-hint">Relative mode · both lines show change from the visible-range start</div>
-            <div id="chart-scale-pill" class="chart-scale-pill">Current scale: loading…</div>
-          </div>
-        </div>
-
-        <div id="chart-wrap" class="chart-wrap">
           <div id="chart-tooltip" class="chart-tooltip hidden"></div>
           <svg id="chart-svg" preserveAspectRatio="none" aria-hidden="true"></svg>
         </div>
 
         <div id="chart-axis" class="chart-axis"></div>
 
-        <div id="brush-label" class="brush-label">Showing full history</div>
+        <div id="brush-label" class="brush-label">Visible range · full history</div>
 
         <div id="brush-wrap" class="brush-wrap">
           <svg id="brush-svg" preserveAspectRatio="none" aria-hidden="true"></svg>

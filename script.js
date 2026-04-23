@@ -460,27 +460,6 @@ function updateLegend() {
   );
 }
 
-function updateChartContext() {
-  const hint = document.getElementById("chart-axis-hint");
-  const scalePill = document.getElementById("chart-scale-pill");
-
-  if (hint) {
-    hint.textContent = state.currentChartMode === "relative"
-      ? "Relative mode · both lines show % change from the visible-range start"
-      : "Absolute mode · Aave = left axis, Dolomite = right axis";
-  }
-
-  if (scalePill) {
-    if (!Number.isFinite(state.latestSupply) || !Number.isFinite(state.compareLatestSupply) || state.compareLatestSupply <= 0) {
-      scalePill.textContent = "Current scale: —";
-      return;
-    }
-
-    const ratio = state.latestSupply / state.compareLatestSupply;
-    scalePill.textContent = `Current scale: Aave ${ratio.toFixed(ratio >= 10 ? 1 : 2)}x Dolomite`;
-  }
-}
-
 function formatChartAxisTick(value, mode) {
   if (!Number.isFinite(value)) {
     return "—";
@@ -802,11 +781,11 @@ function updateBrushLabel() {
   const end = state.rangePoints[endIndex]?.date;
 
   if (!start || !end) {
-    label.textContent = "Showing full history";
+    label.textContent = "Visible range · full history";
     return;
   }
 
-  label.textContent = `${formatDateShort(start, "day")} -> ${formatDateShort(end, "day")}`;
+  label.textContent = `Visible range · ${formatDateShort(start, "day")} -> ${formatDateShort(end, "day")}`;
 }
 
 function updateResetButton() {
@@ -848,7 +827,6 @@ function applyBrush() {
   updateResetButton();
   updateHero(currentVisibleChange());
   updateLegend();
-  updateChartContext();
   renderChart();
 }
 
@@ -1252,7 +1230,6 @@ function bindModePills() {
         control.classList.toggle("active", control.dataset.mode === state.currentChartMode);
       });
 
-      updateChartContext();
       renderChart();
     });
   });
