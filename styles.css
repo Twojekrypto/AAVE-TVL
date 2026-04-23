@@ -528,9 +528,33 @@ h1 {
   gap: 2px;
 }
 
+.legend-head {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .legend-copy strong {
   font-size: 12px;
   letter-spacing: 0.02em;
+}
+
+.legend-badge {
+  padding: 3px 7px;
+  border-radius: 999px;
+  background: rgba(92, 228, 255, 0.08);
+  border: 1px solid rgba(92, 228, 255, 0.16);
+  color: rgba(200, 247, 255, 0.94);
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  line-height: 1;
+}
+
+.legend-badge-emphasis {
+  background: rgba(255, 177, 77, 0.12);
+  border-color: rgba(255, 177, 77, 0.24);
+  color: rgba(255, 229, 181, 0.98);
 }
 
 .legend-copy span {
@@ -559,6 +583,30 @@ h1 {
   display: grid;
   justify-items: end;
   gap: 6px;
+}
+
+.chart-scope-guide {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.scope-badge {
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--text-secondary);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.scope-badge-visible {
+  background: rgba(92, 228, 255, 0.08);
+  border-color: rgba(92, 228, 255, 0.16);
+  color: rgba(200, 247, 255, 0.94);
 }
 
 .chart-scale-pill {
