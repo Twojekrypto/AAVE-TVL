@@ -136,14 +136,6 @@ function formatDateLong(date) {
   });
 }
 
-function formatDateLegend(date) {
-  return date.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-}
-
 function formatDateShort(date, mode) {
   if (mode === "month") {
     return date.toLocaleDateString("en-US", { month: "short", year: "numeric" });
@@ -439,25 +431,15 @@ function buildAaveSnapshot(historyData, currentData = null) {
 }
 
 function updateLegend() {
-  const aaveLegendPoint = state.visiblePoints.length
-    ? state.visiblePoints[state.visiblePoints.length - 1]
-    : (state.rawPoints[state.rawPoints.length - 1] || null);
-  const dolomiteLegendPoint = state.compareVisiblePoints.length
-    ? state.compareVisiblePoints[state.compareVisiblePoints.length - 1]
-    : (state.compareRawPoints[state.compareRawPoints.length - 1] || null);
-  const aaveLegendValue = aaveLegendPoint?.value ?? state.latestSupply;
-  const dolomiteLegendValue = dolomiteLegendPoint?.value ?? state.compareLatestSupply;
+  const aaveLegendValue = state.visiblePoints.length
+    ? state.visiblePoints[state.visiblePoints.length - 1].value
+    : state.latestSupply;
+  const dolomiteLegendValue = state.compareVisiblePoints.length
+    ? state.compareVisiblePoints[state.compareVisiblePoints.length - 1].value
+    : state.compareLatestSupply;
 
   setMetric("legend-aave-value", formatCurrency(aaveLegendValue));
   setMetric("legend-dolomite-value", formatCurrency(dolomiteLegendValue));
-  setMetric(
-    "legend-aave-date",
-    aaveLegendPoint ? `Visible end · ${formatDateLegend(aaveLegendPoint.date)}` : "Visible end · —"
-  );
-  setMetric(
-    "legend-dolomite-date",
-    dolomiteLegendPoint ? `Visible end · ${formatDateLegend(dolomiteLegendPoint.date)}` : "Visible end · —"
-  );
 }
 
 function formatChartAxisTick(value, mode) {

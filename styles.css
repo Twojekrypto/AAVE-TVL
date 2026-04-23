@@ -534,7 +534,7 @@ h1 {
 
 .legend-item {
   display: inline-flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 10px;
   padding: 12px 14px;
   border-radius: 18px;
@@ -555,7 +555,6 @@ h1 {
   height: 12px;
   border-radius: 999px;
   flex-shrink: 0;
-  margin-top: 5px;
 }
 
 .legend-swatch-aave {
@@ -570,7 +569,7 @@ h1 {
 
 .legend-copy {
   display: grid;
-  gap: 3px;
+  gap: 2px;
 }
 
 .legend-copy strong {
@@ -587,15 +586,8 @@ h1 {
 
 .legend-copy .legend-value {
   color: rgba(244, 248, 255, 0.98);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
-}
-
-.legend-copy .legend-meta {
-  color: rgba(168, 183, 214, 0.7);
-  font-size: 9px;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
 }
 
 .chart-toolbar {
