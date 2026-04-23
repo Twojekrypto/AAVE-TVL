@@ -215,15 +215,32 @@
       </section>
 
       <section class="source-strip">
-        <div>
-          <span class="source-label">Source</span>
-          <a href="https://api.v3.aave.com/graphql" target="_blank" rel="noreferrer">api.v3.aave.com/graphql</a>
-          <span class="source-divider">·</span>
-          <a href="https://api.llama.fi/protocol/aave" target="_blank" rel="noreferrer">api.llama.fi/protocol/aave (history backfill)</a>
-          <span class="source-divider">·</span>
-          <a href="https://twojekrypto.github.io/vedolo-dashboard/defillama_data.json" target="_blank" rel="noreferrer">vedolo-dashboard/defillama_data.json</a>
-          <span class="source-divider">·</span>
-          <a href="https://twojekrypto.github.io/vedolo-dashboard/dolomite_tvl.json" target="_blank" rel="noreferrer">vedolo-dashboard/dolomite_tvl.json</a>
+        <div class="source-intro">
+          <span class="source-label">Data sources</span>
+          <p>Current Aave values come from the official API. History and comparison below use aligned backfill feeds.</p>
+        </div>
+
+        <div class="source-groups">
+          <article class="source-group">
+            <span class="source-group-label">Current Aave</span>
+            <a class="source-chip source-chip-primary" href="https://api.v3.aave.com/graphql" target="_blank" rel="noreferrer">Aave GraphQL API</a>
+            <p class="source-note">Live market size and available liquidity.</p>
+          </article>
+
+          <article class="source-group">
+            <span class="source-group-label">Aave history</span>
+            <a class="source-chip" href="https://api.llama.fi/protocol/aave" target="_blank" rel="noreferrer">DefiLlama history backfill</a>
+            <p class="source-note">Historical supply line aligned to official current Aave supply.</p>
+          </article>
+
+          <article class="source-group">
+            <span class="source-group-label">Dolomite compare</span>
+            <div class="source-chip-stack">
+              <a class="source-chip" href="https://twojekrypto.github.io/vedolo-dashboard/defillama_data.json" target="_blank" rel="noreferrer">Dolomite history snapshot</a>
+              <a class="source-chip" href="https://twojekrypto.github.io/vedolo-dashboard/dolomite_tvl.json" target="_blank" rel="noreferrer">Dolomite current snapshot</a>
+            </div>
+            <p class="source-note">Comparison series used for the second line in Supply Over Time.</p>
+          </article>
         </div>
       </section>
     </main>

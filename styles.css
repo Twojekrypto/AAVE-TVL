@@ -224,7 +224,7 @@ h1 {
   display: grid;
   grid-template-columns: minmax(320px, 380px) minmax(0, 1fr);
   gap: 24px;
-  align-items: start;
+  align-items: stretch;
 }
 
 .hero-panel,
@@ -540,7 +540,8 @@ h1 {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
   padding: 24px 22px 22px;
-  min-height: 0;
+  min-height: 640px;
+  height: 100%;
 }
 
 .chain-panel .chain-bars {
@@ -1092,24 +1093,87 @@ h1 {
 }
 
 .source-strip {
-  display: flex;
-  justify-content: space-between;
-  gap: 18px;
-  align-items: center;
-  padding: 18px 22px;
+  display: grid;
+  grid-template-columns: minmax(260px, 0.9fr) minmax(0, 1.45fr);
+  gap: 20px 24px;
+  align-items: start;
+  padding: 22px;
   color: var(--text-secondary);
   font-size: 13px;
 }
 
-.source-strip a {
-  color: var(--text-primary);
-  text-decoration: none;
-  border-bottom: 1px solid rgba(124, 165, 255, 0.24);
+.source-intro,
+.source-groups,
+.source-group {
+  position: relative;
+  z-index: 1;
 }
 
-.source-divider {
-  margin: 0 10px;
+.source-intro {
+  display: grid;
+  gap: 10px;
+  max-width: 28rem;
+}
+
+.source-intro p,
+.source-note {
+  margin: 0;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.source-groups {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.source-group {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(161, 182, 255, 0.08);
+}
+
+.source-group-label {
   color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.source-chip-stack {
+  display: grid;
+  gap: 8px;
+}
+
+.source-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 42px;
+  padding: 0 14px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(161, 182, 255, 0.08);
+  color: var(--text-primary);
+  text-decoration: none;
+  font-weight: 600;
+  transition: transform var(--transition), background var(--transition), border-color var(--transition);
+}
+
+.source-chip:hover {
+  transform: translateY(-1px);
+  background: rgba(255, 255, 255, 0.065);
+  border-color: rgba(124, 165, 255, 0.2);
+}
+
+.source-chip-primary {
+  background: linear-gradient(135deg, rgba(88, 166, 255, 0.15), rgba(47, 230, 255, 0.08));
+  border-color: rgba(88, 166, 255, 0.18);
 }
 
 .loading-state,
@@ -1150,6 +1214,10 @@ h1 {
     align-items: start;
   }
 
+  .chain-panel {
+    min-height: 0;
+  }
+
   .overview-metrics {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
@@ -1163,6 +1231,14 @@ h1 {
     overflow: visible;
     padding-right: 0;
   }
+
+  .source-strip {
+    grid-template-columns: 1fr;
+  }
+
+  .source-groups {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 780px) {
@@ -1173,8 +1249,7 @@ h1 {
   .topbar,
   .headline-row,
   .panel-header,
-  .chart-header,
-  .source-strip {
+  .chart-header {
     flex-direction: column;
   }
 
@@ -1221,6 +1296,10 @@ h1 {
 
   .chart-wrap {
     height: 326px;
+  }
+
+  .source-groups {
+    grid-template-columns: 1fr;
   }
 }
 

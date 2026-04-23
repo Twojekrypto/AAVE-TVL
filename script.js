@@ -659,12 +659,12 @@ function updateHero(changePct) {
 }
 
 function syncChainPanelHeight() {
-  const heroPanel = document.querySelector(".hero-panel");
+  const chartPanel = document.querySelector(".chart-panel");
   const chainPanel = document.querySelector(".chain-panel");
   const chainHeader = chainPanel?.querySelector(".panel-header");
   const chainBars = document.getElementById("chain-bars");
 
-  if (!heroPanel || !chainPanel || !chainHeader || !chainBars) {
+  if (!chartPanel || !chainPanel || !chainHeader || !chainBars) {
     return;
   }
 
@@ -676,7 +676,7 @@ function syncChainPanelHeight() {
     return;
   }
 
-  const heroHeight = Math.ceil(heroPanel.getBoundingClientRect().height);
+  const chartHeight = Math.ceil(chartPanel.getBoundingClientRect().height);
   const panelStyle = window.getComputedStyle(chainPanel);
   const headerStyle = window.getComputedStyle(chainHeader);
   const paddingTop = parseFloat(panelStyle.paddingTop) || 0;
@@ -684,15 +684,15 @@ function syncChainPanelHeight() {
   const headerMarginBottom = parseFloat(headerStyle.marginBottom) || 0;
   const availableHeight = Math.max(
     220,
-    heroHeight
+    chartHeight
       - paddingTop
       - paddingBottom
       - chainHeader.getBoundingClientRect().height
       - headerMarginBottom
   );
 
-  chainPanel.style.height = `${heroHeight}px`;
-  chainPanel.style.minHeight = `${heroHeight}px`;
+  chainPanel.style.height = `${chartHeight}px`;
+  chainPanel.style.minHeight = `${chartHeight}px`;
   chainBars.style.height = `${availableHeight}px`;
   chainBars.style.maxHeight = `${availableHeight}px`;
 }
