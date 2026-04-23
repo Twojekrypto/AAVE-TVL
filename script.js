@@ -93,7 +93,6 @@ const state = {
   compareVisiblePoints: [],
   compareLatestSupply: 0,
   compareChainCount: 0,
-  chainsExpanded: false,
 };
 
 function formatCurrency(value) {
@@ -687,6 +686,39 @@ function updateHero(changePct) {
   badge.className = `delta-badge ${direction}`;
 
   heroChange.textContent = `Change over the active visible range: ${sign}${changePct.toFixed(2)}%.`;
+  requestAnimationFrame(syncChainPanelHeight);
+}
+
+function syncChainPanelHeight() {
+  const heroPanel = document.querySelector(".hero-panel");
+  const chainPanel = document.querySelector(".chain-panel");
+  const chainHeader = chainPanel?.querySelector(".panel-header");
+  const chainBars = document.getElementById("chain-bars");
+
+  if (!heroPanel || !chainPanel || !chainHeader || !chainBars) {
+    return;
+  }
+
+  if (window.innerWidth <= 1120) {
+    chainBars.style.maxHeight = "";
+    return;
+  }
+
+  const panelStyle = window.getComputedStyle(chainPanel);
+  const headerStyle = window.getComputedStyle(chainHeader);
+  const paddingTop = parseFloat(panelStyle.paddingTop) || 0;
+  const paddingBottom = parseFloat(panelStyle.paddingBottom) || 0;
+  const headerMarginBottom = parseFloat(headerStyle.marginBottom) || 0;
+  const availableHeight = Math.max(
+    220,
+    heroPanel.getBoundingClientRect().height
+      - paddingTop
+      - paddingBottom
+      - chainHeader.getBoundingClientRect().height
+      - headerMarginBottom
+  );
+
+  chainBars.style.maxHeight = `${availableHeight}px`;
 }
 
 function renderChainBars() {
@@ -695,10 +727,9 @@ function renderChainBars() {
     return;
   }
 
-  const visibleRows = state.chainsExpanded ? state.chainRows : state.chainRows.slice(0, 8);
   const totalSupply = state.latestSupply;
 
-  const rowsMarkup = visibleRows
+  const rowsMarkup = state.chainRows
     .map((row) => {
       const meta = CHAIN_META[row.chain] || { color: "#7ca5ff" };
       const pct = totalSupply > 0 ? (row.supply / totalSupply) * 100 : 0;
@@ -724,16 +755,7 @@ function renderChainBars() {
     })
     .join("");
 
-  const needsToggle = state.chainRows.length > 8;
-  const toggleLabel = state.chainsExpanded
-    ? "Show fewer chains"
-    : `Show ${state.chainRows.length - 8} more chains`;
-
-  container.innerHTML = rowsMarkup + (
-    needsToggle
-      ? `<button class="chain-toggle" id="chain-toggle" type="button">${toggleLabel}</button>`
-      : ""
-  );
+  container.innerHTML = rowsMarkup;
 
   const supplySummary = document.getElementById("chain-summary-supply");
   const borrowedSummary = document.getElementById("chain-summary-borrowed");
@@ -750,15 +772,8 @@ function renderChainBars() {
     container.querySelectorAll(".chain-bar-fill").forEach((bar) => {
       bar.style.width = bar.dataset.width;
     });
+    syncChainPanelHeight();
   });
-
-  const toggle = document.getElementById("chain-toggle");
-  if (toggle) {
-    toggle.addEventListener("click", () => {
-      state.chainsExpanded = !state.chainsExpanded;
-      renderChainBars();
-    });
-  }
 }
 
 function currentVisibleChange() {
@@ -1401,6 +1416,8 @@ async function fetchData() {
 
 function bindResizeRefresh() {
   const rerender = () => {
+    syncChainPanelHeight();
+
     if (!state.rawPoints.length) {
       return;
     }
