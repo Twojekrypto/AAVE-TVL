@@ -850,6 +850,7 @@ h1 {
 .brush-wrap {
   position: relative;
   height: 62px;
+  overscroll-behavior: none;
 }
 
 #brush-svg {

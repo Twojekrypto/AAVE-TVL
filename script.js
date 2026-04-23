@@ -1232,9 +1232,39 @@ function bindBrush() {
   let startX = 0;
   let startBrushStart = 0;
   let startBrushEnd = 0;
+  let lockedScrollY = 0;
+  let htmlOverflow = "";
+  let bodyOverflow = "";
+  let bodyUserSelect = "";
+  let bodyTouchAction = "";
 
   function overlayWidth() {
     return overlay.getBoundingClientRect().width;
+  }
+
+  function suppressNativeDrag(event) {
+    event.preventDefault();
+  }
+
+  function lockPageScroll() {
+    lockedScrollY = window.scrollY;
+    htmlOverflow = document.documentElement.style.overflow;
+    bodyOverflow = document.body.style.overflow;
+    bodyUserSelect = document.body.style.userSelect;
+    bodyTouchAction = document.body.style.touchAction;
+
+    document.documentElement.style.overflow = "hidden";
+    document.body.style.overflow = "hidden";
+    document.body.style.userSelect = "none";
+    document.body.style.touchAction = "none";
+  }
+
+  function unlockPageScroll() {
+    document.documentElement.style.overflow = htmlOverflow;
+    document.body.style.overflow = bodyOverflow;
+    document.body.style.userSelect = bodyUserSelect;
+    document.body.style.touchAction = bodyTouchAction;
+    window.scrollTo(window.scrollX, lockedScrollY);
   }
 
   function beginDrag(nextMode, event) {
@@ -1250,12 +1280,17 @@ function bindBrush() {
     startBrushStart = state.brushStart;
     startBrushEnd = state.brushEnd;
     document.body.style.cursor = nextMode === "pan" ? "grabbing" : "ew-resize";
-    document.body.style.userSelect = "none";
+    lockPageScroll();
 
     if (typeof event.currentTarget?.setPointerCapture === "function" && activePointerId !== null) {
       event.currentTarget.setPointerCapture(activePointerId);
     }
   }
+
+  [overlay, leftHandle, rightHandle, windowEl].forEach((element) => {
+    element.addEventListener("dragstart", suppressNativeDrag);
+    element.addEventListener("selectstart", suppressNativeDrag);
+  });
 
   leftHandle.addEventListener("pointerdown", (event) => beginDrag("left", event));
   rightHandle.addEventListener("pointerdown", (event) => beginDrag("right", event));
@@ -1308,6 +1343,14 @@ function bindBrush() {
     applyBrush();
   }, { passive: false });
 
+  document.addEventListener("wheel", (event) => {
+    if (!mode) {
+      return;
+    }
+
+    event.preventDefault();
+  }, { passive: false });
+
   function endDrag(event) {
     if (!mode) {
       return;
@@ -1320,7 +1363,7 @@ function bindBrush() {
     mode = null;
     activePointerId = null;
     document.body.style.cursor = "";
-    document.body.style.userSelect = "";
+    unlockPageScroll();
   }
 
   document.addEventListener("pointerup", endDrag);
