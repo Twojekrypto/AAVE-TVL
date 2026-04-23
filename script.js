@@ -442,6 +442,31 @@ function updateLegend() {
   setMetric("legend-dolomite-value", formatCurrency(dolomiteLegendValue));
 }
 
+function updateMixPanel() {
+  const supply = state.latestSupply;
+  const available = state.latestTvl;
+  const borrowed = state.latestBorrowed;
+  const availableShare = supply > 0 ? (available / supply) * 100 : 0;
+  const borrowedShare = supply > 0 ? (borrowed / supply) * 100 : 0;
+
+  setMetric("mix-pill", `${formatPercent(borrowedShare, 2)} borrowed`);
+  setMetric("mix-available-value", formatCurrency(available));
+  setMetric("mix-borrowed-value", formatCurrency(borrowed));
+  setMetric("mix-available-share", `${availableShare.toFixed(1)}% of supply`);
+  setMetric("mix-borrowed-share", `${borrowedShare.toFixed(1)}% of supply`);
+
+  const availableFill = document.getElementById("mix-available-fill");
+  const borrowedFill = document.getElementById("mix-borrowed-fill");
+
+  if (availableFill) {
+    availableFill.style.width = `${Math.max(0, availableShare)}%`;
+  }
+
+  if (borrowedFill) {
+    borrowedFill.style.width = `${Math.max(0, borrowedShare)}%`;
+  }
+}
+
 function formatChartAxisTick(value, mode) {
   if (!Number.isFinite(value)) {
     return "—";
@@ -548,27 +573,10 @@ function hydrateData(historyData, currentData = null, sourceLabel = "snapshot") 
   renderBrush();
   setRange(state.currentRange || "all");
 
-  const supplySub = document.getElementById("metric-supply-sub");
-  if (hasOfficialCurrent) {
-    if (supplySub) {
-      supplySub.textContent = "Official Aave API current supply, normalized onto the visible history series";
-    }
-  } else if (state.rawPoints.length >= 2) {
-    const prev = state.rawPoints[state.rawPoints.length - 2].value;
-    const latest = state.rawPoints[state.rawPoints.length - 1].value;
-    const dayChange = prev ? ((latest - prev) / prev) * 100 : 0;
-    if (supplySub) {
-      const prefix = sourceLabel === "live" ? "Live" : "Snapshot";
-      supplySub.textContent = `${prefix} daily move ${dayChange >= 0 ? "+" : ""}${dayChange.toFixed(2)}%`;
-    }
-  }
-
   const updatedAt = document.getElementById("metric-updated");
   if (updatedAt && state.rawPoints.length) {
     const latestPointDate = formatDateLong(state.rawPoints[state.rawPoints.length - 1].date);
-    updatedAt.textContent = hasOfficialCurrent
-      ? `Official current · history ends ${latestPointDate}`
-      : `${sourceLabel === "live" ? "Live" : "Snapshot"} point: ${latestPointDate}`;
+    updatedAt.textContent = `History end · ${latestPointDate}`;
   }
 
   setAaveStatus(
@@ -625,15 +633,15 @@ function updateHero(changePct) {
   const heroChange = document.getElementById("hero-change");
 
   setMetric("hero-supply", formatCurrency(state.latestSupply));
-  setMetric("metric-supply", formatCurrency(state.latestSupply));
   setMetric("metric-tvl", formatCurrency(state.latestTvl));
   setMetric("metric-borrowed", formatCurrency(state.latestBorrowed));
   setMetric("metric-utilization", formatPercent((state.latestBorrowed / state.latestSupply) * 100, 2));
   setMetric("metric-chains", String(state.chainRows.length));
+  updateMixPanel();
 
   const updatedAt = document.getElementById("metric-updated");
   if (updatedAt && state.rawPoints.length) {
-    updatedAt.textContent = `Latest point: ${formatDateLong(state.rawPoints[state.rawPoints.length - 1].date)}`;
+    updatedAt.textContent = `History end · ${formatDateLong(state.rawPoints[state.rawPoints.length - 1].date)}`;
   }
 
   if (!badge || !heroChange) {
@@ -646,7 +654,7 @@ function updateHero(changePct) {
   badge.textContent = `${sign}${changePct.toFixed(2)}%`;
   badge.className = `delta-badge ${direction}`;
 
-  heroChange.textContent = `Change over the active visible range: ${sign}${changePct.toFixed(2)}%.`;
+  heroChange.textContent = `Change in selected chart range: ${sign}${changePct.toFixed(2)}%.`;
   requestAnimationFrame(syncChainPanelHeight);
 }
 
@@ -725,17 +733,6 @@ function renderChainBars() {
 
   container.innerHTML = rowsMarkup;
 
-  const supplySummary = document.getElementById("chain-summary-supply");
-  const borrowedSummary = document.getElementById("chain-summary-borrowed");
-
-  if (supplySummary) {
-    supplySummary.textContent = `Supply ${formatCurrency(totalSupply)}`;
-  }
-
-  if (borrowedSummary) {
-    borrowedSummary.textContent = `Borrowed ${formatCurrency(state.latestBorrowed)}`;
-  }
-
   requestAnimationFrame(() => {
     container.querySelectorAll(".chain-bar-fill").forEach((bar) => {
       bar.style.width = bar.dataset.width;
@@ -774,7 +771,7 @@ function updateBrushLabel() {
     return;
   }
 
-  label.textContent = `Visible range · ${formatDateShort(start, "day")} -> ${formatDateShort(end, "day")}`;
+  label.textContent = `Visible range · ${formatDateShort(start, "day")} to ${formatDateShort(end, "day")}`;
 }
 
 function updateResetButton() {
