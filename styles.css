@@ -186,6 +186,13 @@ h1 {
   gap: 24px;
 }
 
+.summary-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.95fr);
+  gap: 24px;
+  align-items: start;
+}
+
 .hero-panel,
 .panel,
 .source-strip {
@@ -210,6 +217,11 @@ h1 {
 
 .hero-panel {
   padding: 28px;
+}
+
+.summary-grid .hero-panel,
+.summary-grid .panel {
+  min-height: 100%;
 }
 
 .hero-copy {
@@ -280,6 +292,15 @@ h1 {
   gap: 14px;
 }
 
+.summary-grid .metric-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.summary-grid .metric-card:last-child {
+  grid-column: 1 / -1;
+}
+
 .metric-card {
   display: grid;
   gap: 8px;
@@ -313,13 +334,6 @@ h1 {
   color: var(--text-secondary);
   font-size: 12px;
   line-height: 1.45;
-}
-
-.analytics-grid {
-  display: grid;
-  grid-template-columns: minmax(300px, 360px) minmax(0, 1fr);
-  gap: 24px;
-  align-items: start;
 }
 
 .panel {
@@ -363,6 +377,14 @@ h1 {
   gap: 12px;
 }
 
+.summary-grid .chain-panel {
+  padding: 24px 22px 22px;
+}
+
+.summary-grid .chain-bars {
+  gap: 10px;
+}
+
 .chain-row {
   padding: 14px 14px 12px;
   border-radius: 18px;
@@ -375,6 +397,11 @@ h1 {
   transform: translateY(-2px);
   border-color: rgba(124, 165, 255, 0.18);
   background: rgba(255, 255, 255, 0.04);
+}
+
+.summary-grid .chain-row {
+  padding: 12px 13px 11px;
+  border-radius: 16px;
 }
 
 .chain-row-top {
@@ -443,6 +470,11 @@ h1 {
   margin-top: 9px;
   color: var(--text-secondary);
   font-size: 12px;
+}
+
+.summary-grid .chain-meta {
+  margin-top: 8px;
+  font-size: 11px;
 }
 
 .chain-toggle {
@@ -977,12 +1009,20 @@ h1 {
 }
 
 @media (max-width: 1120px) {
+  .summary-grid {
+    grid-template-columns: 1fr;
+  }
+
   .metric-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
-  .analytics-grid {
-    grid-template-columns: 1fr;
+  .summary-grid .metric-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .summary-grid .metric-card:last-child {
+    grid-column: auto;
   }
 }
 
@@ -1001,6 +1041,14 @@ h1 {
 
   .metric-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .summary-grid .metric-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .summary-grid .metric-card:last-child {
+    grid-column: 1 / -1;
   }
 
   .brand-block {
@@ -1039,6 +1087,14 @@ h1 {
 @media (max-width: 560px) {
   .metric-grid {
     grid-template-columns: 1fr;
+  }
+
+  .summary-grid .metric-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .summary-grid .metric-card:last-child {
+    grid-column: auto;
   }
 
   .range-pills {

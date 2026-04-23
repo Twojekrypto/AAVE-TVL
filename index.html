@@ -40,53 +40,53 @@
     </header>
 
     <main class="dashboard">
-      <section class="hero-panel">
-        <div class="hero-copy">
-          <p class="panel-kicker">Current protocol snapshot</p>
-          <div class="headline-row">
-            <div>
-              <h2 id="hero-supply">Loading...</h2>
-              <p id="hero-change" class="hero-change">Waiting for latest Aave supply series...</p>
+      <section class="summary-grid">
+        <section class="hero-panel">
+          <div class="hero-copy">
+            <p class="panel-kicker">Current protocol snapshot</p>
+            <div class="headline-row">
+              <div>
+                <h2 id="hero-supply">Loading...</h2>
+                <p id="hero-change" class="hero-change">Waiting for latest Aave supply series...</p>
+              </div>
+              <div id="hero-badge" class="delta-badge hidden"></div>
             </div>
-            <div id="hero-badge" class="delta-badge hidden"></div>
+            <p class="formula-note">Current Aave supply comes from the official <strong>Aave GraphQL API</strong>. Borrowed is derived as <strong>Supply - Available Liquidity</strong>; history is temporarily normalized from the legacy series.</p>
           </div>
-          <p class="formula-note">Current Aave supply comes from the official <strong>Aave GraphQL API</strong>. Borrowed is derived as <strong>Supply - Available Liquidity</strong>; history is temporarily normalized from the legacy series.</p>
-        </div>
 
-        <div class="metric-grid">
-          <article class="metric-card">
-            <span class="metric-label">Supply</span>
-            <strong id="metric-supply">—</strong>
-            <span id="metric-supply-sub" class="metric-sub">Current protocol-wide supplied liquidity</span>
-          </article>
+          <div class="metric-grid">
+            <article class="metric-card">
+              <span class="metric-label">Supply</span>
+              <strong id="metric-supply">—</strong>
+              <span id="metric-supply-sub" class="metric-sub">Current protocol-wide supplied liquidity</span>
+            </article>
 
-          <article class="metric-card">
-            <span class="metric-label">Available Liquidity</span>
-            <strong id="metric-tvl">—</strong>
-            <span class="metric-sub">Currently unborrowed liquidity from the official Aave markets</span>
-          </article>
+            <article class="metric-card">
+              <span class="metric-label">Available Liquidity</span>
+              <strong id="metric-tvl">—</strong>
+              <span class="metric-sub">Currently unborrowed liquidity from the official Aave markets</span>
+            </article>
 
-          <article class="metric-card">
-            <span class="metric-label">Borrowed</span>
-            <strong id="metric-borrowed">—</strong>
-            <span class="metric-sub">Derived from official market size minus available liquidity</span>
-          </article>
+            <article class="metric-card">
+              <span class="metric-label">Borrowed</span>
+              <strong id="metric-borrowed">—</strong>
+              <span class="metric-sub">Derived from official market size minus available liquidity</span>
+            </article>
 
-          <article class="metric-card">
-            <span class="metric-label">Utilization</span>
-            <strong id="metric-utilization">—</strong>
-            <span class="metric-sub">Borrowed as a share of total supplied liquidity</span>
-          </article>
+            <article class="metric-card">
+              <span class="metric-label">Utilization</span>
+              <strong id="metric-utilization">—</strong>
+              <span class="metric-sub">Borrowed as a share of total supplied liquidity</span>
+            </article>
 
-          <article class="metric-card">
-            <span class="metric-label">Active Chains</span>
-            <strong id="metric-chains">—</strong>
-            <span id="metric-updated" class="metric-sub">Latest refresh pending</span>
-          </article>
-        </div>
-      </section>
+            <article class="metric-card">
+              <span class="metric-label">Active Chains</span>
+              <strong id="metric-chains">—</strong>
+              <span id="metric-updated" class="metric-sub">Latest refresh pending</span>
+            </article>
+          </div>
+        </section>
 
-      <section class="analytics-grid">
         <article class="panel chain-panel">
           <div class="panel-header">
             <div>
@@ -104,91 +104,91 @@
             <div class="loading-state">Loading chain distribution...</div>
           </div>
         </article>
-
-        <article class="panel chart-panel">
-          <div class="panel-header chart-header">
-            <div>
-              <p class="panel-kicker">Interactive history</p>
-              <h3>Supply Over Time</h3>
-            </div>
-
-            <div class="chart-toolbar">
-              <div class="mode-pills" id="mode-pills">
-                <button type="button" data-mode="relative" class="active">Relative</button>
-                <button type="button" data-mode="absolute">Absolute</button>
-              </div>
-              <div class="range-pills" id="range-pills">
-                <button type="button" data-range="30">30D</button>
-                <button type="button" data-range="90">90D</button>
-                <button type="button" data-range="180">180D</button>
-                <button type="button" data-range="365">1Y</button>
-                <button type="button" data-range="all" class="active">ALL</button>
-              </div>
-              <button id="reset-zoom" class="reset-button hidden" type="button">Reset zoom</button>
-            </div>
-          </div>
-
-          <div class="chart-compare-meta">
-            <div class="chart-legend">
-              <div class="legend-item">
-                <span class="legend-swatch legend-swatch-aave"></span>
-                <div class="legend-copy">
-                  <div class="legend-head">
-                    <strong>Aave Supply</strong>
-                    <span class="legend-badge">Visible range</span>
-                  </div>
-                  <span id="legend-aave-value" class="legend-value">—</span>
-                  <span id="legend-aave-date" class="legend-meta">Visible end · —</span>
-                </div>
-              </div>
-              <div class="legend-item legend-item-emphasis">
-                <span class="legend-swatch legend-swatch-dolomite"></span>
-                <div class="legend-copy">
-                  <div class="legend-head">
-                    <strong>Dolomite Supply</strong>
-                    <span class="legend-badge legend-badge-emphasis">Visible range</span>
-                  </div>
-                  <span id="legend-dolomite-value" class="legend-value">—</span>
-                  <span id="legend-dolomite-date" class="legend-meta">Visible end · —</span>
-                </div>
-              </div>
-            </div>
-            <div class="chart-context">
-              <div class="chart-scope-guide">
-                <span class="scope-badge">Top metrics = Current</span>
-                <span class="scope-badge scope-badge-visible">Chart legend = Visible range</span>
-              </div>
-              <div id="chart-axis-hint" class="chart-axis-hint">Relative mode · both lines show change from the visible-range start</div>
-              <div id="chart-scale-pill" class="chart-scale-pill">Current scale: loading…</div>
-            </div>
-          </div>
-
-          <div id="chart-wrap" class="chart-wrap">
-            <div id="chart-tooltip" class="chart-tooltip hidden"></div>
-            <svg id="chart-svg" preserveAspectRatio="none" aria-hidden="true"></svg>
-          </div>
-
-          <div id="chart-axis" class="chart-axis"></div>
-
-          <div id="brush-label" class="brush-label">Showing full history</div>
-
-          <div id="brush-wrap" class="brush-wrap">
-            <svg id="brush-svg" preserveAspectRatio="none" aria-hidden="true"></svg>
-            <div id="brush-overlay" class="brush-overlay">
-              <div id="brush-dim-left" class="brush-dim brush-dim-left"></div>
-              <div id="brush-window" class="brush-window">
-                <div id="brush-handle-left" class="brush-handle brush-handle-left">
-                  <span></span><span></span>
-                </div>
-                <div id="brush-handle-right" class="brush-handle brush-handle-right">
-                  <span></span><span></span>
-                </div>
-              </div>
-              <div id="brush-dim-right" class="brush-dim brush-dim-right"></div>
-            </div>
-          </div>
-        </article>
       </section>
+
+      <article class="panel chart-panel">
+        <div class="panel-header chart-header">
+          <div>
+            <p class="panel-kicker">Interactive history</p>
+            <h3>Supply Over Time</h3>
+          </div>
+
+          <div class="chart-toolbar">
+            <div class="mode-pills" id="mode-pills">
+              <button type="button" data-mode="relative" class="active">Relative</button>
+              <button type="button" data-mode="absolute">Absolute</button>
+            </div>
+            <div class="range-pills" id="range-pills">
+              <button type="button" data-range="30">30D</button>
+              <button type="button" data-range="90">90D</button>
+              <button type="button" data-range="180">180D</button>
+              <button type="button" data-range="365">1Y</button>
+              <button type="button" data-range="all" class="active">ALL</button>
+            </div>
+            <button id="reset-zoom" class="reset-button hidden" type="button">Reset zoom</button>
+          </div>
+        </div>
+
+        <div class="chart-compare-meta">
+          <div class="chart-legend">
+            <div class="legend-item">
+              <span class="legend-swatch legend-swatch-aave"></span>
+              <div class="legend-copy">
+                <div class="legend-head">
+                  <strong>Aave Supply</strong>
+                  <span class="legend-badge">Visible range</span>
+                </div>
+                <span id="legend-aave-value" class="legend-value">—</span>
+                <span id="legend-aave-date" class="legend-meta">Visible end · —</span>
+              </div>
+            </div>
+            <div class="legend-item legend-item-emphasis">
+              <span class="legend-swatch legend-swatch-dolomite"></span>
+              <div class="legend-copy">
+                <div class="legend-head">
+                  <strong>Dolomite Supply</strong>
+                  <span class="legend-badge legend-badge-emphasis">Visible range</span>
+                </div>
+                <span id="legend-dolomite-value" class="legend-value">—</span>
+                <span id="legend-dolomite-date" class="legend-meta">Visible end · —</span>
+              </div>
+            </div>
+          </div>
+          <div class="chart-context">
+            <div class="chart-scope-guide">
+              <span class="scope-badge">Top metrics = Current</span>
+              <span class="scope-badge scope-badge-visible">Chart legend = Visible range</span>
+            </div>
+            <div id="chart-axis-hint" class="chart-axis-hint">Relative mode · both lines show change from the visible-range start</div>
+            <div id="chart-scale-pill" class="chart-scale-pill">Current scale: loading…</div>
+          </div>
+        </div>
+
+        <div id="chart-wrap" class="chart-wrap">
+          <div id="chart-tooltip" class="chart-tooltip hidden"></div>
+          <svg id="chart-svg" preserveAspectRatio="none" aria-hidden="true"></svg>
+        </div>
+
+        <div id="chart-axis" class="chart-axis"></div>
+
+        <div id="brush-label" class="brush-label">Showing full history</div>
+
+        <div id="brush-wrap" class="brush-wrap">
+          <svg id="brush-svg" preserveAspectRatio="none" aria-hidden="true"></svg>
+          <div id="brush-overlay" class="brush-overlay">
+            <div id="brush-dim-left" class="brush-dim brush-dim-left"></div>
+            <div id="brush-window" class="brush-window">
+              <div id="brush-handle-left" class="brush-handle brush-handle-left">
+                <span></span><span></span>
+              </div>
+              <div id="brush-handle-right" class="brush-handle brush-handle-right">
+                <span></span><span></span>
+              </div>
+            </div>
+            <div id="brush-dim-right" class="brush-dim brush-dim-right"></div>
+          </div>
+        </div>
+      </article>
 
       <section class="source-strip">
         <div>
