@@ -539,6 +539,17 @@ h1 {
   font-family: "JetBrains Mono", monospace;
 }
 
+.legend-copy .legend-value {
+  color: var(--text-secondary);
+}
+
+.legend-copy .legend-meta {
+  color: var(--text-dim);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
 .chart-axis-hint {
   color: var(--text-dim);
   font-size: 12px;
